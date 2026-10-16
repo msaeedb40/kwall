@@ -1,0 +1,42 @@
+name: KWALL eBPF Build & Verification
+
+on:
+  push:
+    branches: [main, mybuild]
+    paths:
+      - 'crates/kwall-ebpf/**'
+      - 'crates/kwall-ebpf-common/**'
+      - '.cargo/**'
+      - '.github/workflows/ebpf.yaml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  ebpf:
+    name: Build eBPF Bytecode
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nightly Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+
+      - name: Install bpf-linker
+        uses: taiki-e/install-action@bpf-linker
+
+      - name: Build eBPF programs
+        run: |
+          cargo +nightly build \
+            -Z build-std=core \
+            -p kwall-ebpf \
+            --release \
+            --target bpfel-unknown-none
+
+      - name: Upload eBPF Bytecode Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kwall-ebpf-bytecode
+          path: target/bpfel-unknown-none/release/kwall-ebpf
