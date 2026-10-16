@@ -5,9 +5,6 @@ import type {
 import type {
   IKwallFlowRecord,
   StreamConnectionStatus,
-  FlowProtocol,
-  FlowDirection,
-  FlowVerdict,
 } from '../types';
 
 export class KwallTelemetryStreamer implements IKwallTelemetryStreamer {
@@ -16,8 +13,10 @@ export class KwallTelemetryStreamer implements IKwallTelemetryStreamer {
   private status: StreamConnectionStatus = 'OFFLINE';
   private subscribers: Set<(flow: IKwallFlowRecord) => void> = new Set();
   private statusSubscribers: Set<(status: StreamConnectionStatus) => void> = new Set();
-  private simulationInterval: ReturnType<typeof setInterval> | null = null;
   private isActive: boolean = false;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryCount: number = 0;
+  private readonly maxRetries: number = 5;
 
   public constructor(wsUrl: string = 'ws://localhost:8080/api/v1/ws') {
     this.wsUrl = wsUrl;
@@ -50,13 +49,14 @@ export class KwallTelemetryStreamer implements IKwallTelemetryStreamer {
   public start(): void {
     if (this.isActive) return;
     this.isActive = true;
+    this.retryCount = 0;
     this.connect();
   }
 
   public stop(): void {
     this.isActive = false;
+    this.clearReconnectTimer();
     this.cleanupSocket();
-    this.stopSimulation();
     this.updateStatus('OFFLINE');
   }
 
@@ -70,13 +70,15 @@ export class KwallTelemetryStreamer implements IKwallTelemetryStreamer {
   private connect(): void {
     if (typeof window === 'undefined') return;
 
+    this.clearReconnectTimer();
+    this.updateStatus(this.retryCount > 0 ? 'RECONNECTING' : 'CONNECTING');
+
     try {
-      this.updateStatus('CONNECTING');
       this.socket = new WebSocket(this.wsUrl);
 
       this.socket.onopen = () => {
+        this.retryCount = 0;
         this.updateStatus('STREAMING');
-        this.stopSimulation();
       };
 
       this.socket.onmessage = (event: MessageEvent) => {
@@ -84,22 +86,45 @@ export class KwallTelemetryStreamer implements IKwallTelemetryStreamer {
           const flow = JSON.parse(event.data as string) as IKwallFlowRecord;
           this.emitFlow(flow);
         } catch {
-          // Ignore malformed socket frames
+          // Ignore invalid frames
         }
       };
 
       this.socket.onerror = () => {
-        // Fall back to dynamic real-time kernel flow simulator
-        this.fallbackToSimulation();
+        this.cleanupSocket();
+        this.scheduleReconnect();
       };
 
       this.socket.onclose = () => {
+        this.cleanupSocket();
         if (this.isActive) {
-          this.fallbackToSimulation();
+          this.scheduleReconnect();
         }
       };
     } catch {
-      this.fallbackToSimulation();
+      this.scheduleReconnect();
+    }
+  }
+
+  private scheduleReconnect(): void {
+    if (!this.isActive) return;
+
+    if (this.retryCount < this.maxRetries) {
+      this.retryCount++;
+      const backoffMs = Math.min(1000 * Math.pow(2, this.retryCount), 10000);
+      this.updateStatus('RECONNECTING');
+      this.reconnectTimer = setTimeout(() => {
+        this.connect();
+      }, backoffMs);
+    } else {
+      this.updateStatus('OFFLINE');
+    }
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
     }
   }
 
@@ -109,26 +134,12 @@ export class KwallTelemetryStreamer implements IKwallTelemetryStreamer {
       this.socket.onmessage = null;
       this.socket.onerror = null;
       this.socket.onclose = null;
-      this.socket.close();
+      try {
+        this.socket.close();
+      } catch {
+        // no-op
+      }
       this.socket = null;
-    }
-  }
-
-  private fallbackToSimulation(): void {
-    this.cleanupSocket();
-    if (!this.simulationInterval && this.isActive) {
-      this.updateStatus('STREAMING');
-      this.simulationInterval = setInterval(() => {
-        const dynamicFlow = this.synthesizeRealtimeKernelFlow();
-        this.emitFlow(dynamicFlow);
-      }, 1600);
-    }
-  }
-
-  private stopSimulation(): void {
-    if (this.simulationInterval) {
-      clearInterval(this.simulationInterval);
-      this.simulationInterval = null;
     }
   }
 
@@ -136,52 +147,5 @@ export class KwallTelemetryStreamer implements IKwallTelemetryStreamer {
     for (const sub of this.subscribers) {
       sub(flow);
     }
-  }
-
-  // Dynamic flow synthesis based on actual network protocols and non-hardcoded endpoints
-  private synthesizeRealtimeKernelFlow(): IKwallFlowRecord {
-    const namespaces = ['production', 'ingress-nginx', 'monitoring', 'kube-system'];
-    const serviceNames = ['frontend', 'api-gateway', 'payment-svc', 'redis-cache', 'auth-service', 'worker-node'];
-    const protocols: FlowProtocol[] = ['TCP', 'UDP', 'ICMP'];
-    const ports = [80, 443, 8080, 5432, 6379, 9090, 22];
-
-    const srcIndex = Math.floor(Math.random() * serviceNames.length);
-    let dstIndex = Math.floor(Math.random() * serviceNames.length);
-    if (dstIndex === srcIndex) {
-      dstIndex = (dstIndex + 1) % serviceNames.length;
-    }
-
-    const srcPod = `${serviceNames[srcIndex]}-${Math.random().toString(36).substring(2, 7)}`;
-    const dstPod = `${serviceNames[dstIndex]}-${Math.random().toString(36).substring(2, 7)}`;
-    const namespace = namespaces[Math.floor(Math.random() * namespaces.length)];
-
-    const selectedPort = ports[Math.floor(Math.random() * ports.length)];
-    const isDeniedPort = selectedPort === 22 || (selectedPort === 5432 && serviceNames[srcIndex] === 'frontend');
-    const verdict: FlowVerdict = isDeniedPort ? 'DROP' : 'PASS';
-    const direction: FlowDirection = Math.random() > 0.4 ? 'INGRESS' : 'EGRESS';
-    const protocol: FlowProtocol = protocols[Math.floor(Math.random() * protocols.length)];
-
-    const now = new Date();
-    const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`;
-
-    return {
-      id: `fl-${Date.now().toString(36)}-${Math.floor(Math.random() * 1000)}`,
-      timestamp,
-      srcIdentity: 1000 + srcIndex * 15,
-      dstIdentity: 1000 + dstIndex * 15,
-      srcPod,
-      dstPod,
-      namespace,
-      srcIp: `10.244.${(srcIndex + 1)}.${Math.floor(Math.random() * 250 + 2)}`,
-      dstIp: `10.244.${(dstIndex + 1)}.${Math.floor(Math.random() * 250 + 2)}`,
-      srcPort: Math.floor(32768 + Math.random() * 28000),
-      dstPort: selectedPort,
-      protocol,
-      direction,
-      verdict,
-      dropReason: verdict === 'DROP' ? (selectedPort === 22 ? 'PolicyDeny (SSH Unprivileged Port Block)' : 'PolicyDeny (Cross-tier isolation violation)') : undefined,
-      bytes: Math.floor(128 + Math.random() * 4096),
-      packets: Math.floor(1 + Math.random() * 12),
-    };
   }
 }

@@ -15,7 +15,7 @@ import type {
   IKwallBlacklistEntry,
   StreamConnectionStatus,
 } from './types';
-import { ShieldAlert, Cpu, ArrowUpRight } from 'lucide-react';
+import { ShieldAlert, Cpu, ArrowUpRight, AlertCircle, RefreshCw } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('overview');
@@ -34,40 +34,67 @@ export const App: React.FC = () => {
   const [maps, setMaps] = useState<IKwallEbpfMap[]>([]);
   const [blacklist, setBlacklist] = useState<IKwallBlacklistEntry[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  // Initial data loading from API Client
-  useEffect(() => {
-    let isMounted = true;
+  // Load live data from kwall-agent API
+  const loadData = useCallback(() => {
     setIsLoading(true);
+    setConnectionError(null);
 
     Promise.all([
       apiClient.fetchNodeStatus(),
-      apiClient.fetchThreatAlerts(),
-      apiClient.fetchPolicies(),
-      apiClient.fetchEbpfMaps(),
-      apiClient.fetchBlacklist(),
+      apiClient.fetchThreatAlerts().catch(() => []),
+      apiClient.fetchPolicies().catch(() => []),
+      apiClient.fetchEbpfMaps().catch(() => []),
+      apiClient.fetchBlacklist().catch(() => []),
     ])
       .then(([nodeStatus, threatAlerts, pols, ebpfMaps, bl]) => {
-        if (!isMounted) return;
         setStatus(nodeStatus);
         setAlerts(threatAlerts);
         setPolicies(pols);
         setMaps(ebpfMaps);
         setBlacklist(bl);
+        setConnectionError(null);
       })
       .catch((err) => {
-        console.error('Initial data fetch error:', err);
+        setConnectionError(err instanceof Error ? err.message : 'Unable to connect to kwall-agent REST endpoint');
       })
       .finally(() => {
-        if (isMounted) setIsLoading(false);
+        setIsLoading(false);
       });
-
-    return () => {
-      isMounted = false;
-    };
   }, [apiClient]);
 
-  // Live eBPF Telemetry Streaming with capped sliding memory window
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Handle entering standby mode with zero mocked numbers
+  const handleEnterStandby = useCallback(() => {
+    setStatus({
+      nodeName: 'kwall-node-standby',
+      kernelVersion: 'Linux kernel (offline mode)',
+      ebpfReady: false,
+      netkitActive: false,
+      lsmActive: false,
+      activeInterfaces: [],
+      totalPackets: 0,
+      totalBytes: 0,
+      droppedPackets: 0,
+      activeEndpoints: 0,
+      enforcedPolicies: 0,
+      p95LatencyUs: 0,
+      p99LatencyUs: 0,
+    });
+    setAlerts([]);
+    setPolicies([]);
+    setMaps([]);
+    setBlacklist([]);
+    setFlows([]);
+    setConnectionError(null);
+    setIsLoading(false);
+  }, []);
+
+  // Real eBPF Telemetry Streaming
   useEffect(() => {
     if (!isStreaming) {
       streamer.stop();
@@ -78,7 +105,6 @@ export const App: React.FC = () => {
 
     const subscription = streamer.subscribe(
       (flow: IKwallFlowRecord) => {
-        // High-performance bounded sliding window (Divide & conquer memory management)
         setFlows((prev) => [flow, ...prev.slice(0, 99)]);
 
         setStatus((prev) => {
@@ -119,14 +145,50 @@ export const App: React.FC = () => {
     [apiClient]
   );
 
-  if (isLoading || !status) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-4" role="status" aria-live="polite">
         <div className="w-12 h-12 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
-        <span className="text-sm font-mono tracking-wider">INITIALIZING KWALL EBPF DATAPLANE CLIENT...</span>
+        <span className="text-sm font-mono tracking-wider">CONNECTING TO KWALL AGENT API...</span>
       </div>
     );
   }
+
+  if (connectionError && !status) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="glass-panel p-8 max-w-lg w-full flex flex-col items-center gap-4 border border-rose-500/30 shadow-2xl">
+          <div className="p-3 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <h2 className="text-lg font-bold text-white">kwall-agent API Unreachable</h2>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Could not connect to the KWALL agent endpoint at <code className="text-cyan-400 font-mono">{apiClient.getConfig().baseUrl}</code>.
+            Please ensure <code className="text-slate-300 font-mono">kwall-agent</code> is running on the host.
+          </p>
+          <div className="text-[11px] font-mono text-rose-400 bg-slate-900/80 p-2.5 rounded-lg border border-white/5 w-full text-left truncate">
+            {connectionError}
+          </div>
+          <div className="flex gap-3 mt-2 w-full">
+            <button
+              onClick={loadData}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-cyan-400 text-slate-950 font-bold text-xs hover:bg-cyan-300 transition-all"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Retry Connection
+            </button>
+            <button
+              onClick={handleEnterStandby}
+              className="flex-1 px-4 py-2 rounded-lg bg-slate-900 border border-white/20 text-slate-300 text-xs hover:border-white/40 transition-all"
+            >
+              Inspect Empty State
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!status) return null;
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
@@ -173,22 +235,28 @@ export const App: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="flex flex-col gap-2.5">
-                    {alerts.slice(0, 3).map((a) => (
-                      <div
-                        key={a.id}
-                        className="p-3 rounded-lg bg-slate-900 border border-white/10 flex flex-col gap-1"
-                      >
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-white">{a.type}</span>
-                          <span className="text-[10px] font-mono text-slate-500">{a.timestamp}</span>
+                  {alerts.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-slate-500">
+                      No security alerts recorded.
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2.5">
+                      {alerts.slice(0, 3).map((a) => (
+                        <div
+                          key={a.id}
+                          className="p-3 rounded-lg bg-slate-900 border border-white/10 flex flex-col gap-1"
+                        >
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-white">{a.type}</span>
+                            <span className="text-[10px] font-mono text-slate-500">{a.timestamp}</span>
+                          </div>
+                          <span className="text-[11px] text-slate-400 truncate">
+                            Target: {a.podName}
+                          </span>
                         </div>
-                        <span className="text-[11px] text-slate-400 truncate">
-                          Target: {a.podName}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Netkit Fastpath status */}
@@ -198,17 +266,21 @@ export const App: React.FC = () => {
                     <h3 className="text-sm font-bold text-white">Netkit Topology</h3>
                   </div>
                   <div className="text-xs text-slate-400 leading-relaxed">
-                    Direct BPF redirect fastpath is established across <strong className="text-white">{status.activeInterfaces.length} interfaces</strong> with 0 skb copies.
+                    Direct BPF redirect fastpath across <strong className="text-white">{status.activeInterfaces.length} interfaces</strong>.
                   </div>
                   <div className="mt-3.5 flex gap-1.5 flex-wrap">
-                    {status.activeInterfaces.map((iface) => (
-                      <span
-                        key={iface}
-                        className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-white/10 text-cyan-400"
-                      >
-                        {iface}
-                      </span>
-                    ))}
+                    {status.activeInterfaces.length === 0 ? (
+                      <span className="text-xs text-slate-500">No active netkit interfaces.</span>
+                    ) : (
+                      status.activeInterfaces.map((iface) => (
+                        <span
+                          key={iface}
+                          className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-white/10 text-cyan-400"
+                        >
+                          {iface}
+                        </span>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
