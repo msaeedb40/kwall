@@ -41,3 +41,7 @@ observability:
     interval: 15s
   dashboards:
     enabled: true
+  prometheusRule:
+    enabled: true
+    p95ThresholdUs: 10
+    p99ThresholdUs: 25

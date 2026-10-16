@@ -1,0 +1,44 @@
+{{- if .Values.observability.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kwall-alerts
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: kwall
+    app.kubernetes.io/component: alerts
+    role: alert-rules
+spec:
+  groups:
+    - name: kwall.dataplane.latency
+      rules:
+        - alert: KwallHighP99DataplaneLatency
+          expr: histogram_quantile(0.99, sum(rate(kwall_bpf_latency_microseconds_bucket[5m])) by (le)) > {{ .Values.observability.prometheusRule.p99ThresholdUs | default 25 }}
+          for: 5m
+          labels:
+            severity: warning
+            subsystem: dataplane
+          annotations:
+            summary: "KWALL eBPF dataplane P99 execution latency exceeded threshold"
+            description: "P99 eBPF dataplane latency is {{ "{{ $value }}" }} µs on node {{ "{{ $labels.instance }}" }}, exceeding {{ .Values.observability.prometheusRule.p99ThresholdUs | default 25 }} µs threshold."
+
+        - alert: KwallHighP95DataplaneLatency
+          expr: histogram_quantile(0.95, sum(rate(kwall_bpf_latency_microseconds_bucket[5m])) by (le)) > {{ .Values.observability.prometheusRule.p95ThresholdUs | default 10 }}
+          for: 5m
+          labels:
+            severity: warning
+            subsystem: dataplane
+          annotations:
+            summary: "KWALL eBPF dataplane P95 execution latency exceeded threshold"
+            description: "P95 eBPF dataplane latency is {{ "{{ $value }}" }} µs on node {{ "{{ $labels.instance }}" }}, exceeding {{ .Values.observability.prometheusRule.p95ThresholdUs | default 10 }} µs threshold."
+
+        - alert: KwallRingbufferDropSpike
+          expr: rate(kwall_ringbuf_drops_total[2m]) > 0
+          for: 1m
+          labels:
+            severity: critical
+            subsystem: telemetry
+          annotations:
+            summary: "KWALL eBPF ring buffer dropping events due to userspace backpressure"
+            description: "Ring buffer drops detected at rate {{ "{{ $value }}" }} drops/sec on {{ "{{ $labels.instance }}" }}. Userspace agent may be CPU throttled."
+{{- end }}
