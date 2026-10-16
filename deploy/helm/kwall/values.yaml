@@ -39,3 +39,5 @@ observability:
   serviceMonitor:
     enabled: true
     interval: 15s
+  dashboards:
+    enabled: true

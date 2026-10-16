@@ -1,17 +1,27 @@
+pub mod correlation;
 pub mod logs;
 pub mod metrics;
+pub mod traces;
 
+pub use correlation::{CorrelatedTelemetryEvent, TelemetryCorrelator};
 pub use logs::{format_flow_for_loki, format_security_event_for_loki, LokiFlowRecord};
 pub use metrics::PrometheusMetrics;
+pub use traces::{BpfSpanRecord, TraceContext};
+
+use std::sync::Arc;
 
 pub struct TelemetryPipeline {
-    pub metrics: PrometheusMetrics,
+    pub metrics: Arc<PrometheusMetrics>,
+    pub correlator: TelemetryCorrelator,
 }
 
 impl TelemetryPipeline {
     pub fn new() -> Self {
+        let metrics = Arc::new(PrometheusMetrics::new());
+        let correlator = TelemetryCorrelator::new(metrics.clone());
         Self {
-            metrics: PrometheusMetrics::new(),
+            metrics,
+            correlator,
         }
     }
 }
@@ -28,18 +38,17 @@ mod tests {
     use kwall_ebpf_common::FlowEvent;
 
     #[test]
-    fn test_flow_loki_serialization() {
+    fn test_pipeline_integration() {
+        let pipeline = TelemetryPipeline::new();
         let mut flow = FlowEvent::default();
-        flow.src_ip[0] = 192;
-        flow.src_ip[1] = 168;
-        flow.src_ip[2] = 1;
-        flow.src_ip[3] = 100;
-        flow.dst_port = 443;
-        flow.bytes = 1200;
+        flow.bytes = 1024;
+        flow.action = 1; // DROP
 
-        let json = format_flow_for_loki(&flow);
-        assert!(json.contains("192.168.1.100"));
-        assert!(json.contains("\"port\":443"));
-        assert!(json.contains("\"bytes\":1200"));
+        let (event, span) = pipeline.correlator.process_flow(&flow);
+        assert_eq!(event.action, "DROP");
+        assert_eq!(span.status, "ERROR");
+
+        let prom_output = pipeline.metrics.render_prometheus();
+        assert!(prom_output.contains("kwall_packets_dropped_total 1"));
     }
 }

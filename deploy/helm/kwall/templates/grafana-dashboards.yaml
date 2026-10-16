@@ -1,0 +1,16 @@
+{{- if .Values.observability.dashboards.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kwall-grafana-dashboards
+  namespace: {{ .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: kwall
+    app.kubernetes.io/component: dashboards
+data:
+  kwall-overview.json: |-
+{{ .Files.Get "dashboards/kwall-overview.json" | indent 4 }}
+  kwall-security.json: |-
+{{ .Files.Get "dashboards/kwall-security.json" | indent 4 }}
+{{- end }}
