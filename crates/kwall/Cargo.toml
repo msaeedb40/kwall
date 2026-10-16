@@ -1,0 +1,17 @@
+[package]
+name = "kwall"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "KWALL main binary for launching Agent or Controller"
+
+[dependencies]
+kwall-common = { workspace = true }
+kwall-agent = { workspace = true }
+kwall-controller = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }

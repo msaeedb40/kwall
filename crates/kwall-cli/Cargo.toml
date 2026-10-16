@@ -1,0 +1,17 @@
+[package]
+name = "kwall-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Administrative CLI for KWALL firewall, eBPF inspection, and security telemetry"
+
+[dependencies]
+kwall-common = { workspace = true }
+kwall-api = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }

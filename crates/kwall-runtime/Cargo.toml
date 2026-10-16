@@ -1,0 +1,15 @@
+[package]
+name = "kwall-runtime"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Container, cgroup, and process lifecycle inspector for KWALL"
+
+[dependencies]
+kwall-common = { workspace = true }
+nix = { workspace = true }
+libc = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }

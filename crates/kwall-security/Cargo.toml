@@ -1,0 +1,17 @@
+[package]
+name = "kwall-security"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Threat detection, DDoS mitigation, LSM hooks, and runtime security for KWALL"
+
+[dependencies]
+kwall-common = { workspace = true }
+kwall-ebpf-common = { workspace = true, features = ["user"] }
+kwall-api = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+blake3 = { workspace = true }
+sha2 = { workspace = true }

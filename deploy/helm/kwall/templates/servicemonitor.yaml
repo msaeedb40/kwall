@@ -1,0 +1,18 @@
+{{- if .Values.observability.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kwall-agent
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: kwall
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kwall
+      app.kubernetes.io/component: agent
+  endpoints:
+    - port: metrics
+      interval: {{ .Values.observability.serviceMonitor.interval }}
+      path: /metrics
+{{- end }}

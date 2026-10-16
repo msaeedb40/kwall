@@ -1,0 +1,16 @@
+[package]
+name = "kwall-observability"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Observability pipeline, Prometheus metrics, and telemetry exporters for KWALL"
+
+[dependencies]
+kwall-common = { workspace = true }
+kwall-ebpf-common = { workspace = true, features = ["user"] }
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

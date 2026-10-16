@@ -1,0 +1,20 @@
+[package]
+name = "kwall-controller"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Kubernetes control plane controller for KWALL policy reconciliation"
+
+[dependencies]
+kwall-common = { workspace = true }
+kwall-ebpf-common = { workspace = true, features = ["user"] }
+kwall-api = { workspace = true }
+kube = { workspace = true }
+k8s-openapi = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+blake3 = { workspace = true }

@@ -1,0 +1,74 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: kwallddospolicies.kwall.io
+spec:
+  group: kwall.io
+  names:
+    categories: []
+    kind: KWALLDDoSPolicy
+    plural: kwallddospolicies
+    shortNames: []
+    singular: kwallddospolicy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns: []
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Auto-generated derived type for KWALLDDoSPolicySpec via `CustomResource`
+        properties:
+          spec:
+            properties:
+              enable_xdp_early_drop:
+                default: false
+                type: boolean
+              ip_blacklist:
+                default: []
+                items:
+                  type: string
+                type: array
+              max_connections_per_ip:
+                format: uint32
+                minimum: 0.0
+                type: integer
+              max_syn_per_second:
+                format: uint32
+                minimum: 0.0
+                type: integer
+              max_udp_packets_per_second:
+                format: uint32
+                minimum: 0.0
+                type: integer
+            required:
+            - max_connections_per_ip
+            - max_syn_per_second
+            - max_udp_packets_per_second
+            type: object
+          status:
+            nullable: true
+            properties:
+              active_nodes:
+                format: uint32
+                minimum: 0.0
+                type: integer
+              error_message:
+                nullable: true
+                type: string
+              last_applied_time:
+                nullable: true
+                type: string
+              state:
+                type: string
+            required:
+            - active_nodes
+            - state
+            type: object
+        required:
+        - spec
+        title: KWALLDDoSPolicy
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

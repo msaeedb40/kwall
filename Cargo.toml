@@ -1,0 +1,112 @@
+[workspace]
+resolver = "3"
+
+members = [
+    "crates/kwall",
+    "crates/kwall-agent",
+    "crates/kwall-controller",
+    "crates/kwall-cni",
+    "crates/kwall-cli",
+    "crates/kwall-api",
+    "crates/kwall-policy",
+    "crates/kwall-security",
+    "crates/kwall-dataplane",
+    "crates/kwall-ebpf",
+    "crates/kwall-ebpf-common",
+    "crates/kwall-runtime",
+    "crates/kwall-observability",
+    "crates/kwall-storage",
+    "crates/kwall-common",
+]
+
+default-members = [
+    "crates/kwall",
+    "crates/kwall-agent",
+    "crates/kwall-controller",
+    "crates/kwall-cni",
+    "crates/kwall-cli",
+    "crates/kwall-api",
+    "crates/kwall-policy",
+    "crates/kwall-security",
+    "crates/kwall-dataplane",
+    "crates/kwall-ebpf-common",
+    "crates/kwall-runtime",
+    "crates/kwall-observability",
+    "crates/kwall-storage",
+    "crates/kwall-common",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["KWALL Maintainers"]
+license = "Apache-2.0"
+repository = "https://github.com/kwall-io/kwall"
+homepage = "https://kwall.io"
+description = "eBPF-powered Kubernetes firewall and multi-layer security platform"
+
+[workspace.dependencies]
+# Internal workspace crates
+kwall-common = { path = "crates/kwall-common" }
+kwall-ebpf-common = { path = "crates/kwall-ebpf-common" }
+kwall-api = { path = "crates/kwall-api" }
+kwall-dataplane = { path = "crates/kwall-dataplane" }
+kwall-policy = { path = "crates/kwall-policy" }
+kwall-security = { path = "crates/kwall-security" }
+kwall-runtime = { path = "crates/kwall-runtime" }
+kwall-observability = { path = "crates/kwall-observability" }
+kwall-storage = { path = "crates/kwall-storage" }
+kwall-controller = { path = "crates/kwall-controller" }
+kwall-agent = { path = "crates/kwall-agent" }
+kwall-cni = { path = "crates/kwall-cni" }
+kwall-cli = { path = "crates/kwall-cli" }
+
+# eBPF dependencies
+aya = { version = "0.14.0", default-features = false }
+aya-log = "0.3.0"
+aya-ebpf = "0.2.1"
+aya-log-ebpf = "0.2.0"
+
+# Async & Systems
+tokio = { version = "1.43", features = ["full"] }
+anyhow = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+bytes = "1.10"
+uuid = { version = "1.15", features = ["v4", "serde"] }
+flag-rs = "0.10.0"
+clap = { version = "4.5", features = ["derive", "env"] }
+
+# Networking & Packets
+ipnetwork = { version = "0.21", features = ["serde"] }
+etherparse = "0.17"
+libc = "0.2"
+nix = { version = "0.29", features = ["process", "socket", "net", "fs", "signal"] }
+
+# Kubernetes & Schema
+kube = { version = "0.98", features = ["runtime", "derive", "client"] }
+k8s-openapi = { version = "0.24", features = ["latest"] }
+schemars = { version = "0.8", features = ["derive"] }
+
+# Cryptography & Hashing
+blake3 = "1.6"
+sha2 = "0.10"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.release-bpf]
+inherits = "release"
+opt-level = 3
+panic = "abort"
+codegen-units = 1
+debug = false
+strip = true

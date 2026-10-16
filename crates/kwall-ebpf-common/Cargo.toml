@@ -1,0 +1,14 @@
+[package]
+name = "kwall-ebpf-common"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Shared C-compatible eBPF ABI, map structures, and event layouts for KWALL"
+
+[features]
+default = []
+user = ["dep:serde"]
+
+[dependencies]
+serde = { workspace = true, optional = true }

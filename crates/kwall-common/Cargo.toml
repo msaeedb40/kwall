@@ -1,0 +1,17 @@
+[package]
+name = "kwall-common"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Common utilities, errors, identity, and constants for KWALL"
+
+[dependencies]
+kwall-ebpf-common = { workspace = true, features = ["user"] }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+ipnetwork = { workspace = true }
+bytes = { workspace = true }

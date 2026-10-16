@@ -1,0 +1,17 @@
+[package]
+name = "kwall-api"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Kubernetes CRD definitions, API models, and schemas for KWALL"
+
+[dependencies]
+kwall-common = { workspace = true }
+kwall-ebpf-common = { workspace = true, features = ["user"] }
+kube = { workspace = true }
+k8s-openapi = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }

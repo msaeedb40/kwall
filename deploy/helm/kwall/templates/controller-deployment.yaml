@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kwall-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: kwall
+    app.kubernetes.io/component: controller
+spec:
+  replicas: {{ .Values.controller.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kwall
+      app.kubernetes.io/component: controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kwall
+        app.kubernetes.io/component: controller
+    spec:
+      serviceAccountName: kwall-controller
+      containers:
+        - name: kwall-controller
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/usr/local/bin/kwall", "controller"]
+          resources:
+            {{- toYaml .Values.controller.resources | nindent 12 }}

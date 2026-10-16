@@ -1,0 +1,16 @@
+[package]
+name = "kwall-policy"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Policy IR, compiler, and rule optimizer for KWALL"
+
+[dependencies]
+kwall-common = { workspace = true }
+kwall-ebpf-common = { workspace = true, features = ["user"] }
+kwall-api = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+ipnetwork = { workspace = true }

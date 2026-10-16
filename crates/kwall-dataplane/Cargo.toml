@@ -1,0 +1,17 @@
+[package]
+name = "kwall-dataplane"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Userspace dataplane, BPF program attachment and conntrack manager for KWALL"
+
+[dependencies]
+kwall-common = { workspace = true }
+kwall-ebpf-common = { workspace = true, features = ["user"] }
+aya = { workspace = true }
+aya-log = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+bytes = { workspace = true }

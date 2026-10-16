@@ -1,0 +1,18 @@
+[package]
+name = "kwall-ebpf"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Kernel-side eBPF programs for KWALL"
+
+[dependencies]
+aya-ebpf = { workspace = true }
+aya-log-ebpf = { workspace = true }
+kwall-ebpf-common = { workspace = true }
+
+[[bin]]
+name = "kwall-ebpf"
+path = "src/main.rs"
+test = false
+bench = false

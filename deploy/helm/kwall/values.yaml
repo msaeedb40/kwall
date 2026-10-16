@@ -1,0 +1,41 @@
+# Default values for kwall.
+
+image:
+  repository: kwall/kwall
+  pullPolicy: IfNotPresent
+  tag: "0.1.0"
+
+agent:
+  enabled: true
+  hostNetwork: true
+  privileged: true
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  metrics:
+    port: 9153
+    enabled: true
+
+controller:
+  enabled: true
+  replicas: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+cni:
+  binDir: /opt/cni/bin
+  confDir: /etc/cni/net.d
+
+observability:
+  serviceMonitor:
+    enabled: true
+    interval: 15s

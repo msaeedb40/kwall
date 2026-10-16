@@ -1,0 +1,119 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: kwallsecuritypolicies.kwall.io
+spec:
+  group: kwall.io
+  names:
+    categories: []
+    kind: KWALLSecurityPolicy
+    plural: kwallsecuritypolicies
+    shortNames: []
+    singular: kwallsecuritypolicy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns: []
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Auto-generated derived type for KWALLSecurityPolicySpec via `CustomResource`
+        properties:
+          spec:
+            properties:
+              action:
+                default: ''
+                type: string
+              endpoint_selector:
+                properties:
+                  match_labels:
+                    additionalProperties:
+                      type: string
+                    default: {}
+                    type: object
+                  match_namespaces:
+                    default: []
+                    items:
+                      type: string
+                    type: array
+                type: object
+              file_integrity_rules:
+                default: []
+                items:
+                  properties:
+                    read_only_paths:
+                      default: []
+                      items:
+                        type: string
+                      type: array
+                    watched_paths:
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - watched_paths
+                  type: object
+                type: array
+              process_rules:
+                default: []
+                items:
+                  properties:
+                    allowed_executables:
+                      items:
+                        type: string
+                      type: array
+                    blocked_executables:
+                      default: []
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - allowed_executables
+                  type: object
+                type: array
+              syscall_rules:
+                default: []
+                items:
+                  properties:
+                    audit_syscalls:
+                      default: []
+                      items:
+                        type: string
+                      type: array
+                    blocked_syscalls:
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - blocked_syscalls
+                  type: object
+                type: array
+            required:
+            - endpoint_selector
+            type: object
+          status:
+            nullable: true
+            properties:
+              active_nodes:
+                format: uint32
+                minimum: 0.0
+                type: integer
+              error_message:
+                nullable: true
+                type: string
+              last_applied_time:
+                nullable: true
+                type: string
+              state:
+                type: string
+            required:
+            - active_nodes
+            - state
+            type: object
+        required:
+        - spec
+        title: KWALLSecurityPolicy
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
