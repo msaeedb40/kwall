@@ -1,3 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-bg: #06080d;
+  --color-brand-surface: #0b0f19;
+  --color-brand-card: #121826;
+  --color-brand-card-hover: #1a2336;
+  --color-brand-cyan: #00f0ff;
+  --color-brand-emerald: #10b981;
+  --color-brand-amber: #f59e0b;
+  --color-brand-crimson: #f43f5e;
+  --color-brand-purple: #a855f7;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
 :root {
   --bg-base: #06080d;
   --bg-primary: #0b0f19;
@@ -6,8 +23,8 @@
   --bg-card-hover: #1e293f;
   --bg-card-active: #25334e;
 
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-medium: rgba(255, 255, 255, 0.14);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.16);
   --border-focus: #00f0ff;
 
   --text-primary: #f8fafc;
@@ -27,22 +44,6 @@
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-full: 9999px;
-
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-glow-cyan: 0 0 20px rgba(0, 240, 255, 0.2);
-  --shadow-glow-crimson: 0 0 20px rgba(244, 63, 94, 0.2);
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 body {
@@ -50,17 +51,25 @@ body {
   background-color: var(--bg-base);
   color: var(--text-primary);
   line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   overflow-x: hidden;
 }
 
-code, pre {
-  font-family: var(--font-mono);
+/* Glassmorphism styling */
+.glass-panel {
+  background: rgba(18, 24, 38, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-/* Custom Sleek Scrollbar */
+.glass-panel:hover {
+  border-color: var(--border-medium);
+}
+
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -71,59 +80,34 @@ code, pre {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-card-hover);
-  border-radius: var(--radius-full);
+  background: #1e293b;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-cyan);
+  background: #334155;
 }
 
-/* Glassmorphism card utility */
-.glass-panel {
-  background: rgba(18, 24, 38, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.glass-panel:hover {
-  border-color: var(--border-medium);
-}
-
-/* Pulsing Badge animations */
-@keyframes pulse-glow {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.1);
-  }
-}
-
+/* Status indicator pulse animation */
 .pulse-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   display: inline-block;
-  animation: pulse-glow 2s infinite ease-in-out;
-}
-
-.pulse-dot.cyan {
-  background-color: var(--accent-cyan);
-  box-shadow: 0 0 8px var(--accent-cyan);
+  position: relative;
 }
 
 .pulse-dot.green {
-  background-color: var(--accent-green);
-  box-shadow: 0 0 8px var(--accent-green);
+  background-color: #10b981;
+  box-shadow: 0 0 10px #10b981;
+}
+
+.pulse-dot.cyan {
+  background-color: #00f0ff;
+  box-shadow: 0 0 10px #00f0ff;
 }
 
 .pulse-dot.crimson {
-  background-color: var(--accent-crimson);
-  box-shadow: 0 0 8px var(--accent-crimson);
+  background-color: #f43f5e;
+  box-shadow: 0 0 10px #f43f5e;
 }

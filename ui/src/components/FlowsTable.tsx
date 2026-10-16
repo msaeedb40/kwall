@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { Search, ArrowUpRight, ArrowDownLeft, CheckCircle2, XCircle, Info, ChevronRight } from 'lucide-react';
-import type { FlowRecord } from '../types';
+import type { IKwallFlowRecord, FlowVerdict } from '../types';
 
-interface FlowsTableProps {
-  flows: FlowRecord[];
+export interface IFlowsTableProps {
+  flows: IKwallFlowRecord[];
 }
 
-export const FlowsTable: React.FC<FlowsTableProps> = ({ flows }) => {
+export const FlowsTable: React.FC<IFlowsTableProps> = ({ flows }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [verdictFilter, setVerdictFilter] = useState<'ALL' | 'PASS' | 'DROP'>('ALL');
-  const [selectedFlow, setSelectedFlow] = useState<FlowRecord | null>(null);
+  const [verdictFilter, setVerdictFilter] = useState<'ALL' | FlowVerdict>('ALL');
+  const [selectedFlow, setSelectedFlow] = useState<IKwallFlowRecord | null>(null);
 
   const filteredFlows = flows.filter((f) => {
     const matchesSearch =
@@ -20,89 +20,50 @@ export const FlowsTable: React.FC<FlowsTableProps> = ({ flows }) => {
       f.dstPort.toString().includes(searchTerm);
 
     const matchesVerdict = verdictFilter === 'ALL' || f.verdict === verdictFilter;
-
     return matchesSearch && matchesVerdict;
   });
 
   return (
-    <div className="glass-panel" style={{ padding: '24px' }}>
+    <div className="glass-panel p-6 shadow-xl">
       {/* Controls Bar */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '16px',
-        marginBottom: '20px',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold text-white tracking-tight">
             Live Kernel Flow Telemetry
           </h2>
-          <span style={{
-            fontSize: '11px',
-            padding: '3px 9px',
-            borderRadius: '999px',
-            background: 'rgba(0, 240, 255, 0.15)',
-            color: 'var(--accent-cyan)',
-            fontWeight: 600,
-          }}>
-            RingBuffer: kw_flow_events
+          <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-white/10">
+            {filteredFlows.length} flows captured
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Search box */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '8px',
-            padding: '6px 12px',
-          }}>
-            <Search size={15} color="var(--text-muted)" />
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Filter pod, IP, or port..."
+              placeholder="Search pod, IP or port..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                color: '#fff',
-                fontSize: '13px',
-                width: '180px',
-              }}
+              className="bg-slate-900 border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-52 md:w-64"
             />
           </div>
 
-          {/* Verdict Filter */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '8px',
-            padding: '2px',
-          }}>
+          {/* Verdict Filter pills */}
+          <div className="flex gap-1 p-0.5 rounded-lg bg-slate-900 border border-white/10 text-xs">
             {(['ALL', 'PASS', 'DROP'] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setVerdictFilter(v)}
-                style={{
-                  padding: '5px 12px',
-                  border: 'none',
-                  borderRadius: '6px',
-                  background: verdictFilter === v ? 'var(--bg-card-hover)' : 'transparent',
-                  color: verdictFilter === v ? '#fff' : 'var(--text-muted)',
-                  fontSize: '12px',
-                  fontWeight: verdictFilter === v ? 600 : 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                  verdictFilter === v
+                    ? v === 'PASS'
+                      ? 'bg-emerald-500 text-slate-950 font-bold'
+                      : v === 'DROP'
+                      ? 'bg-rose-500 text-white font-bold'
+                      : 'bg-cyan-500 text-slate-950 font-bold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
               >
                 {v}
               </button>
@@ -111,126 +72,93 @@ export const FlowsTable: React.FC<FlowsTableProps> = ({ flows }) => {
         </div>
       </div>
 
-      {/* Flows Table */}
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+      {/* Main Table View */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr style={{
-              borderBottom: '1px solid var(--border-subtle)',
-              color: 'var(--text-muted)',
-              fontSize: '11px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}>
-              <th style={{ padding: '12px 14px' }}>Time</th>
-              <th style={{ padding: '12px 14px' }}>Direction</th>
-              <th style={{ padding: '12px 14px' }}>Source Workload</th>
-              <th style={{ padding: '12px 14px' }}>Destination Workload</th>
-              <th style={{ padding: '12px 14px' }}>Protocol / Port</th>
-              <th style={{ padding: '12px 14px' }}>Verdict</th>
-              <th style={{ padding: '12px 14px' }}>Volume</th>
-              <th style={{ padding: '12px 14px' }}></th>
+            <tr className="border-b border-white/10 text-slate-400 font-semibold uppercase tracking-wider">
+              <th className="py-2.5 px-3">Time</th>
+              <th className="py-2.5 px-3">Dir</th>
+              <th className="py-2.5 px-3">Source (ID / Pod)</th>
+              <th className="py-2.5 px-3">Destination (ID / Pod)</th>
+              <th className="py-2.5 px-3">Port / Proto</th>
+              <th className="py-2.5 px-3">Volume</th>
+              <th className="py-2.5 px-3">Verdict</th>
+              <th className="py-2.5 px-3 text-right">Details</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-white/5 font-mono">
             {filteredFlows.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  No matching network flows captured in buffer
+                <td colSpan={8} className="py-8 text-center text-slate-500 font-sans">
+                  No eBPF flows captured matching search criteria.
                 </td>
               </tr>
             ) : (
               filteredFlows.map((flow) => {
                 const isPass = flow.verdict === 'PASS';
+                const isSelected = selectedFlow?.id === flow.id;
                 return (
                   <tr
                     key={flow.id}
                     onClick={() => setSelectedFlow(flow)}
-                    style={{
-                      borderBottom: '1px solid var(--border-subtle)',
-                      cursor: 'pointer',
-                      transition: 'background 0.15s ease',
-                      backgroundColor: selectedFlow?.id === flow.id ? 'rgba(0, 240, 255, 0.05)' : 'transparent',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)')}
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor =
-                        selectedFlow?.id === flow.id ? 'rgba(0, 240, 255, 0.05)' : 'transparent')
-                    }
+                    className={`cursor-pointer transition-colors ${
+                      isSelected ? 'bg-cyan-500/10' : 'hover:bg-slate-900/60'
+                    }`}
                   >
-                    <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                    <td className="py-2.5 px-3 text-slate-400 whitespace-nowrap">
                       {flow.timestamp}
                     </td>
-
-                    <td style={{ padding: '12px 14px' }}>
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        background: flow.direction === 'INGRESS' ? 'rgba(0, 240, 255, 0.1)' : 'rgba(168, 85, 247, 0.1)',
-                        color: flow.direction === 'INGRESS' ? 'var(--accent-cyan)' : 'var(--accent-purple)',
-                      }}>
-                        {flow.direction === 'INGRESS' ? <ArrowDownLeft size={12} /> : <ArrowUpRight size={12} />}
-                        {flow.direction}
-                      </span>
-                    </td>
-
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ fontWeight: 600, color: '#fff' }}>{flow.srcPod}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                        {flow.srcIp} <span style={{ color: 'var(--accent-purple)' }}>[ID: {flow.srcIdentity}]</span>
-                      </div>
-                    </td>
-
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ fontWeight: 600, color: '#fff' }}>{flow.dstPod}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                        {flow.dstIp} <span style={{ color: 'var(--accent-purple)' }}>[ID: {flow.dstIdentity}]</span>
-                      </div>
-                    </td>
-
-                    <td style={{ padding: '12px 14px' }}>
-                      <span style={{ fontWeight: 600, color: '#fff' }}>{flow.protocol}</span>
-                      <span style={{ color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)', marginLeft: '6px' }}>
-                        :{flow.dstPort}
-                      </span>
-                    </td>
-
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {isPass ? (
-                          <CheckCircle2 size={15} color="var(--accent-green)" />
-                        ) : (
-                          <XCircle size={15} color="var(--accent-crimson)" />
-                        )}
-                        <span style={{
-                          fontWeight: 700,
-                          fontSize: '12px',
-                          color: isPass ? 'var(--accent-green)' : 'var(--accent-crimson)',
-                        }}>
-                          {flow.verdict}
+                    <td className="py-2.5 px-3">
+                      {flow.direction === 'INGRESS' ? (
+                        <span className="flex items-center gap-1 text-cyan-400 text-[11px] font-bold">
+                          <ArrowDownLeft className="w-3.5 h-3.5" /> IN
                         </span>
-                      </div>
-                      {flow.dropReason && (
-                        <div style={{ fontSize: '11px', color: 'var(--accent-crimson)', marginTop: '2px' }}>
-                          {flow.dropReason}
-                        </div>
+                      ) : (
+                        <span className="flex items-center gap-1 text-purple-400 text-[11px] font-bold">
+                          <ArrowUpRight className="w-3.5 h-3.5" /> OUT
+                        </span>
                       )}
                     </td>
-
-                    <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
-                      {(flow.bytes / 1024).toFixed(1)} KB
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '4px' }}>
-                        ({flow.packets} pkts)
+                    <td className="py-2.5 px-3">
+                      <div className="font-semibold text-white truncate max-w-[170px]" title={flow.srcPod}>
+                        {flow.srcPod}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        {flow.srcIp} <span className="text-cyan-400 font-bold">[{flow.srcIdentity}]</span>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="font-semibold text-white truncate max-w-[170px]" title={flow.dstPod}>
+                        {flow.dstPod}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        {flow.dstIp} <span className="text-cyan-400 font-bold">[{flow.dstIdentity}]</span>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span className="px-2 py-0.5 rounded bg-slate-900 border border-white/10 text-white font-semibold">
+                        :{flow.dstPort}
+                      </span>{' '}
+                      <span className="text-slate-400 text-[11px]">{flow.protocol}</span>
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-300 whitespace-nowrap">
+                      {flow.bytes} B <span className="text-slate-500 text-[10px]">({flow.packets} pkts)</span>
+                    </td>
+                    <td className="py-2.5 px-3 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
+                          isPass
+                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                            : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                        }`}
+                      >
+                        {isPass ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                        {flow.verdict}
                       </span>
                     </td>
-
-                    <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                      <ChevronRight size={16} color="var(--text-muted)" />
+                    <td className="py-2.5 px-3 text-right">
+                      <ChevronRight className="w-4 h-4 text-slate-500 inline-block" />
                     </td>
                   </tr>
                 );
@@ -240,59 +168,37 @@ export const FlowsTable: React.FC<FlowsTableProps> = ({ flows }) => {
         </table>
       </div>
 
-      {/* Flow Inspector Drawer Modal */}
+      {/* Detail Drawer */}
       {selectedFlow && (
-        <div style={{
-          marginTop: '20px',
-          padding: '18px 24px',
-          borderRadius: '10px',
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--accent-cyan)',
-          boxShadow: '0 0 20px rgba(0, 240, 255, 0.1)',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Info size={18} color="var(--accent-cyan)" />
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>
-                Kernel Flow Event Inspector: {selectedFlow.id}
-              </h3>
+        <div className="mt-6 p-4 rounded-xl bg-slate-950/80 border border-cyan-500/30 font-mono text-xs shadow-2xl">
+          <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+            <div className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-cyan-400" />
+              <span className="font-bold text-white font-sans text-sm">
+                eBPF Packet Ringbuffer Inspection [{selectedFlow.id}]
+              </span>
             </div>
             <button
               onClick={() => setSelectedFlow(null)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                fontSize: '13px',
-              }}
+              className="text-slate-400 hover:text-white font-sans text-xs"
             >
-              ✕ Close
+              Close
             </button>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', fontSize: '12px' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <span style={{ color: 'var(--text-muted)' }}>Source:</span>
-              <div style={{ fontFamily: 'var(--font-mono)', color: '#fff' }}>{selectedFlow.srcIp}:{selectedFlow.srcPort}</div>
-              <div style={{ color: 'var(--accent-purple)' }}>Pod: {selectedFlow.srcPod} (ID: {selectedFlow.srcIdentity})</div>
+              <div className="text-slate-400 text-[11px]">Source Endpoint:</div>
+              <div className="text-white font-semibold">{selectedFlow.srcPod} ({selectedFlow.srcIp})</div>
+              <div className="text-slate-400 text-[11px] mt-2">Destination Endpoint:</div>
+              <div className="text-white font-semibold">{selectedFlow.dstPod} ({selectedFlow.dstIp}:{selectedFlow.dstPort})</div>
             </div>
             <div>
-              <span style={{ color: 'var(--text-muted)' }}>Destination:</span>
-              <div style={{ fontFamily: 'var(--font-mono)', color: '#fff' }}>{selectedFlow.dstIp}:{selectedFlow.dstPort}</div>
-              <div style={{ color: 'var(--accent-purple)' }}>Pod: {selectedFlow.dstPod} (ID: {selectedFlow.dstIdentity})</div>
-            </div>
-            <div>
-              <span style={{ color: 'var(--text-muted)' }}>eBPF Hook Layer:</span>
-              <div style={{ color: '#fff' }}>TC / TCX (kwall_tc_{selectedFlow.direction.toLowerCase()})</div>
-              <div style={{ color: 'var(--accent-cyan)' }}>Netkit Zero-Copy Path</div>
-            </div>
-            <div>
-              <span style={{ color: 'var(--text-muted)' }}>Verdict Enforcement:</span>
-              <div style={{ fontWeight: 700, color: selectedFlow.verdict === 'PASS' ? 'var(--accent-green)' : 'var(--accent-crimson)' }}>
-                {selectedFlow.verdict}
+              <div className="text-slate-400 text-[11px]">Aya Ringbuffer Verdict:</div>
+              <div className={selectedFlow.verdict === 'PASS' ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                {selectedFlow.verdict} {selectedFlow.dropReason ? `— ${selectedFlow.dropReason}` : ''}
               </div>
-              <div style={{ color: 'var(--text-secondary)' }}>{selectedFlow.dropReason || 'Matched Allow Rule'}</div>
+              <div className="text-slate-400 text-[11px] mt-2">Namespace & Payload:</div>
+              <div className="text-slate-300">{selectedFlow.namespace} • {selectedFlow.bytes} Bytes ({selectedFlow.packets} packets)</div>
             </div>
           </div>
         </div>

@@ -1,106 +1,75 @@
 import React from 'react';
 import { Activity, ShieldAlert, Layers, Zap } from 'lucide-react';
-import type { NodeStatus } from '../types';
+import type { IKwallNodeStatus } from '../types';
 
-interface MetricCardsProps {
-  status: NodeStatus;
+export interface IMetricCardsProps {
+  status: IKwallNodeStatus;
 }
 
-export const MetricCards: React.FC<MetricCardsProps> = ({ status }) => {
+export const MetricCards: React.FC<IMetricCardsProps> = ({ status }) => {
   const cards = [
     {
       title: 'eBPF Packets Processed',
       value: status.totalPackets.toLocaleString(),
       subtext: `${(status.totalBytes / (1024 * 1024 * 1024)).toFixed(2)} GB total volume`,
-      icon: <Activity size={20} color="var(--accent-cyan)" />,
-      glowColor: 'var(--accent-cyan-glow)',
-      accentColor: 'var(--accent-cyan)',
-      trend: '+14.2k/s',
+      icon: <Activity className="w-5 h-5 text-cyan-400" />,
+      borderGlow: 'hover:border-cyan-500/50 hover:shadow-cyan-500/10',
+      badgeColor: 'text-cyan-400 bg-cyan-500/10',
+      trend: '+18.4k/s',
     },
     {
       title: 'Packets Dropped / Filtered',
       value: status.droppedPackets.toLocaleString(),
       subtext: 'Wire-speed XDP + TC policy drops',
-      icon: <ShieldAlert size={20} color="var(--accent-crimson)" />,
-      glowColor: 'var(--accent-crimson-glow)',
-      accentColor: 'var(--accent-crimson)',
-      trend: '0.07% rate',
+      icon: <ShieldAlert className="w-5 h-5 text-rose-500" />,
+      borderGlow: 'hover:border-rose-500/50 hover:shadow-rose-500/10',
+      badgeColor: 'text-rose-400 bg-rose-500/10',
+      trend: `${((status.droppedPackets / Math.max(1, status.totalPackets)) * 100).toFixed(3)}% rate`,
     },
     {
       title: 'Workload Identities',
       value: status.activeEndpoints.toString(),
-      subtext: `${status.enforcedPolicies} policies compiled in KW_POLICIES`,
-      icon: <Layers size={20} color="var(--accent-purple)" />,
-      glowColor: 'var(--accent-purple-glow)',
-      accentColor: 'var(--accent-purple)',
-      trend: '100% synchronized',
+      subtext: `${status.enforcedPolicies} policies active in KW_POLICIES`,
+      icon: <Layers className="w-5 h-5 text-purple-400" />,
+      borderGlow: 'hover:border-purple-500/50 hover:shadow-purple-500/10',
+      badgeColor: 'text-purple-400 bg-purple-500/10',
+      trend: '100% sync',
     },
     {
-      title: 'Kernel Dataplane Latency',
+      title: 'Dataplane Fastpath Latency',
       value: `${status.p95LatencyUs} µs`,
-      subtext: `P99: ${status.p99LatencyUs} µs (netkit zero-copy path)`,
-      icon: <Zap size={20} color="var(--accent-green)" />,
-      glowColor: 'var(--accent-green-glow)',
-      accentColor: 'var(--accent-green)',
-      trend: 'Ultra-low overhead',
+      subtext: `p99: ${status.p99LatencyUs} µs via Linux netkit`,
+      icon: <Zap className="w-5 h-5 text-emerald-400" />,
+      borderGlow: 'hover:border-emerald-500/50 hover:shadow-emerald-500/10',
+      badgeColor: 'text-emerald-400 bg-emerald-500/10',
+      trend: 'Sub-µs fastpath',
     },
   ];
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-      gap: '18px',
-      marginBottom: '28px',
-    }}>
-      {cards.map((c, idx) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {cards.map((c) => (
         <div
-          key={idx}
-          className="glass-panel"
-          style={{
-            padding: '20px',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
+          key={c.title}
+          className={`glass-panel p-5 transition-all duration-300 hover:-translate-y-0.5 shadow-lg ${c.borderGlow}`}
         >
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '14px',
-          }}>
-            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-              {c.title}
-            </span>
-            <div style={{
-              padding: '8px',
-              borderRadius: '8px',
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-subtle)',
-            }}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-400">{c.title}</span>
+            <div className="p-2 rounded-lg bg-slate-900 border border-white/10">
               {c.icon}
             </div>
           </div>
-
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', marginBottom: '6px' }}>
-            {c.value}
+          <div className="mt-3 flex items-baseline justify-between">
+            <div className="text-2xl font-black text-white font-mono tracking-tight">
+              {c.value}
+            </div>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${c.badgeColor}`}>
+              {c.trend}
+            </span>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
-            <span style={{ color: 'var(--text-muted)' }}>{c.subtext}</span>
-            <span style={{ color: c.accentColor, fontWeight: 600 }}>{c.trend}</span>
+          <div className="mt-2 text-xs text-slate-400 font-mono">
+            {c.subtext}
           </div>
-
-          {/* Bottom subtle glow line */}
-          <div style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: '2px',
-            background: `linear-gradient(90deg, transparent, ${c.accentColor}, transparent)`,
-            opacity: 0.6,
-          }} />
         </div>
       ))}
     </div>

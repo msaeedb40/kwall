@@ -1,4 +1,15 @@
-export interface NodeStatus {
+// Domain interfaces and types for KWALL Dataplane & Runtime Security Platform
+
+export type FlowVerdict = 'PASS' | 'DROP' | 'REDIRECT';
+export type FlowProtocol = 'TCP' | 'UDP' | 'ICMP';
+export type FlowDirection = 'INGRESS' | 'EGRESS';
+
+export type AlertSeverity = 'Info' | 'Low' | 'Medium' | 'High' | 'Critical';
+export type AlertCategory = 'SYN Flood' | 'Port Scan' | 'Untrusted Executable' | 'DNS Tunneling' | 'Container Escape';
+
+export type StreamConnectionStatus = 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'OFFLINE' | 'STREAMING';
+
+export interface IKwallNodeStatus {
   nodeName: string;
   kernelVersion: string;
   ebpfReady: boolean;
@@ -14,7 +25,7 @@ export interface NodeStatus {
   p99LatencyUs: number;
 }
 
-export interface FlowRecord {
+export interface IKwallFlowRecord {
   id: string;
   timestamp: string;
   srcIdentity: number;
@@ -26,19 +37,19 @@ export interface FlowRecord {
   dstIp: string;
   srcPort: number;
   dstPort: number;
-  protocol: 'TCP' | 'UDP' | 'ICMP';
-  direction: 'INGRESS' | 'EGRESS';
-  verdict: 'PASS' | 'DROP' | 'REDIRECT';
+  protocol: FlowProtocol;
+  direction: FlowDirection;
+  verdict: FlowVerdict;
   dropReason?: string;
   bytes: number;
   packets: number;
 }
 
-export interface SecurityAlert {
+export interface IKwallSecurityAlert {
   id: string;
   timestamp: string;
-  type: 'SYN Flood' | 'Port Scan' | 'Untrusted Executable' | 'DNS Tunneling' | 'Container Escape';
-  severity: 'Info' | 'Low' | 'Medium' | 'High' | 'Critical';
+  type: AlertCategory;
+  severity: AlertSeverity;
   identityId: number;
   podName: string;
   namespace: string;
@@ -47,26 +58,35 @@ export interface SecurityAlert {
   blocked: boolean;
 }
 
-export interface PolicyRule {
+export interface IPortRule {
+  port: number;
+  protocol: string;
+}
+
+export interface IIngressRule {
+  from: string[];
+  ports: IPortRule[];
+  action: 'Allow' | 'Deny';
+}
+
+export interface IEgressRule {
+  to: string[];
+  ports: IPortRule[];
+  action: 'Allow' | 'Deny';
+}
+
+export interface IKwallPolicyRule {
   id: string;
   name: string;
   namespace: string;
   targetApp: string;
-  ingressRules: {
-    from: string[];
-    ports: { port: number; protocol: string }[];
-    action: 'Allow' | 'Deny';
-  }[];
-  egressRules: {
-    to: string[];
-    ports: { port: number; protocol: string }[];
-    action: 'Allow' | 'Deny';
-  }[];
+  ingressRules: IIngressRule[];
+  egressRules: IEgressRule[];
   state: 'Active' | 'Draft' | 'Disabled';
   activeNodes: number;
 }
 
-export interface EbpfMapInfo {
+export interface IKwallEbpfMap {
   name: string;
   type: string;
   maxEntries: number;
@@ -74,4 +94,32 @@ export interface EbpfMapInfo {
   keySize: number;
   valueSize: number;
   description: string;
+}
+
+export interface IKwallBlacklistEntry {
+  ip: string;
+  reason: string;
+  timestamp: string;
+  packetsDropped: number;
+}
+
+export interface ICompiledBpfRule {
+  mapName: string;
+  keyRepresentation: string;
+  valueRepresentation: string;
+  verificationStatus: 'VERIFIED_ACTIVE' | 'DEFAULT_DENY_FALLTHROUGH' | 'PENDING_MAP_INSERTION';
+}
+
+export interface IKwallPolicyCompilationResult {
+  policyId: string;
+  ruleCount: number;
+  compilationLatencyMs: number;
+  bpfRules: ICompiledBpfRule[];
+}
+
+export interface IKwallApiConfig {
+  baseUrl: string;
+  wsUrl: string;
+  streamIntervalMs: number;
+  reconnectAttempts: number;
 }

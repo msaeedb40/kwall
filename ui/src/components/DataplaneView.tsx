@@ -1,127 +1,94 @@
 import React from 'react';
 import { Cpu, HardDrive, Network, CheckCircle2, ArrowRightLeft } from 'lucide-react';
-import type { EbpfMapInfo, NodeStatus } from '../types';
+import type { IKwallEbpfMap, IKwallNodeStatus } from '../types';
 
-interface DataplaneViewProps {
-  status: NodeStatus;
-  maps: EbpfMapInfo[];
+export interface IDataplaneViewProps {
+  status: IKwallNodeStatus;
+  maps: IKwallEbpfMap[];
 }
 
-export const DataplaneView: React.FC<DataplaneViewProps> = ({ status, maps }) => {
+export const DataplaneView: React.FC<IDataplaneViewProps> = ({ status, maps }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-6" role="region" aria-label="Kernel Dataplane & Netkit Diagnostics">
       {/* Kernel Subsystem Diagnostics Banner */}
-      <div className="glass-panel" style={{ padding: '24px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Cpu size={22} color="var(--accent-cyan)" />
+      <div className="glass-panel p-6 shadow-xl">
+        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2.5">
+          <Cpu className="w-5 h-5 text-cyan-400" />
           Kernel Environment & aya-bpf Runtime Subsystems
         </h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-          <div style={{ padding: '16px', borderRadius: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Linux Kernel Core</span>
-              <CheckCircle2 size={16} color="var(--accent-emerald)" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 rounded-xl bg-slate-900 border border-white/10">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-400">Linux Kernel Core</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" aria-label="Kernel Healthy" />
             </div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Linux 6.8.0-45</div>
-            <div style={{ fontSize: '11px', color: 'var(--accent-cyan)', marginTop: '4px' }}>BTF Enabled (/sys/kernel/btf/vmlinux)</div>
+            <div className="text-sm font-bold text-white font-mono">Linux 6.8.0-45</div>
+            <div className="text-[11px] text-cyan-400 mt-1 font-mono">BTF (/sys/kernel/btf/vmlinux)</div>
           </div>
 
-          <div style={{ padding: '16px', borderRadius: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Fastpath Datapath</span>
-              <CheckCircle2 size={16} color="var(--accent-emerald)" />
+          <div className="p-4 rounded-xl bg-slate-900 border border-white/10">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-400">Fastpath Datapath</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" aria-label="Netkit Ready" />
             </div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Netkit Direct Mode</div>
-            <div style={{ fontSize: '11px', color: 'var(--accent-emerald)', marginTop: '4px' }}>Zero-skb overhead vs legacy veth</div>
+            <div className="text-sm font-bold text-white">Netkit Direct Mode</div>
+            <div className="text-[11px] text-emerald-400 mt-1">Zero-skb fastpath vs veth</div>
           </div>
 
-          <div style={{ padding: '16px', borderRadius: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Security Hook System</span>
-              <CheckCircle2 size={16} color="var(--accent-emerald)" />
+          <div className="p-4 rounded-xl bg-slate-900 border border-white/10">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-400">Security Hook System</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" aria-label="BPF LSM Enforcing" />
             </div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>BPF LSM Enforcing</div>
-            <div style={{ fontSize: '11px', color: 'var(--accent-purple)', marginTop: '4px' }}>bprm_check_security + file_open</div>
+            <div className="text-sm font-bold text-white">BPF LSM Enforcing</div>
+            <div className="text-[11px] text-purple-400 mt-1">bprm_check_security + file_open</div>
           </div>
 
-          <div style={{ padding: '16px', borderRadius: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Filesystem Mounts</span>
-              <CheckCircle2 size={16} color="var(--accent-emerald)" />
+          <div className="p-4 rounded-xl bg-slate-900 border border-white/10">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-400">Filesystem Mounts</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" aria-label="Filesystem Mounted" />
             </div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>bpffs + cgroup v2</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Mounted at /sys/fs/bpf & /sys/fs/cgroup</div>
+            <div className="text-sm font-bold text-white">bpffs + cgroup v2</div>
+            <div className="text-[11px] text-slate-400 mt-1 font-mono">/sys/fs/bpf & /sys/fs/cgroup</div>
           </div>
         </div>
       </div>
 
       {/* Netkit Virtual Device Architecture Card */}
-      <div className="glass-panel" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+      <div className="glass-panel p-6 shadow-xl">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Network size={18} color="var(--accent-cyan)" />
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <Network className="w-4 h-4 text-cyan-400" />
               Netkit Device Topology (Linux 6.8+ Native)
             </h3>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            <span className="text-xs text-slate-400">
               Primary device attached to host TC-BPF; peer device placed inside Pod netns as eth0
             </span>
           </div>
-          <span style={{
-            fontSize: '11px',
-            fontFamily: 'var(--font-mono)',
-            padding: '4px 10px',
-            borderRadius: '6px',
-            background: 'rgba(0, 240, 255, 0.12)',
-            color: 'var(--accent-cyan)',
-            border: '1px solid var(--accent-cyan)',
-          }}>
+          <span className="text-xs font-mono px-3 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
             NETKIT_MODE_L3 / REDIRECT
           </span>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '12px',
-          background: 'var(--bg-primary)',
-          padding: '20px',
-          borderRadius: '8px',
-          border: '1px solid var(--border-subtle)',
-        }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-950 p-4 rounded-xl border border-white/10">
           {status.activeInterfaces.map((iface, idx) => (
             <div
               key={iface}
-              style={{
-                padding: '14px',
-                borderRadius: '6px',
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-subtle)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+              className="p-3.5 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-between"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <ArrowRightLeft size={16} color="var(--accent-cyan)" />
+              <div className="flex items-center gap-2.5">
+                <ArrowRightLeft className="w-4 h-4 text-cyan-400" />
                 <div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#fff', fontSize: '13px' }}>
-                    {iface}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  <div className="font-mono font-bold text-white text-xs">{iface}</div>
+                  <div className="text-[10px] text-slate-400">
                     {iface === 'eth0' ? 'Host Physical NIC (XDP Hook)' : `Netkit Primary Peer #0${idx}`}
                   </div>
                 </div>
               </div>
-              <span style={{
-                fontSize: '11px',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                background: 'rgba(16, 185, 129, 0.15)',
-                color: 'var(--accent-emerald)',
-                fontWeight: 600,
-              }}>
+              <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                 ATTACHED
               </span>
             </div>
@@ -130,61 +97,61 @@ export const DataplaneView: React.FC<DataplaneViewProps> = ({ status, maps }) =>
       </div>
 
       {/* eBPF Kernel Maps Table */}
-      <div className="glass-panel" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+      <div className="glass-panel p-6 shadow-xl">
+        <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <HardDrive size={18} color="var(--accent-purple)" />
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <HardDrive className="w-4 h-4 text-purple-400" />
               Pinned Kernel eBPF Maps (/sys/fs/bpf/kwall)
             </h3>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            <span className="text-xs text-slate-400">
               Aya-managed hash tables, LRU conntrack caches, and high-performance ring buffers
             </span>
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
-                <th style={{ padding: '10px 12px' }}>Map Identifier</th>
-                <th style={{ padding: '10px 12px' }}>BPF Map Type</th>
-                <th style={{ padding: '10px 12px' }}>Capacity / Utilization</th>
-                <th style={{ padding: '10px 12px' }}>Key / Value Sizes</th>
-                <th style={{ padding: '10px 12px' }}>Description</th>
+              <tr className="border-b border-white/10 text-slate-400 font-semibold uppercase tracking-wider">
+                <th className="py-2.5 px-3">Map Identifier</th>
+                <th className="py-2.5 px-3">BPF Map Type</th>
+                <th className="py-2.5 px-3">Capacity / Utilization</th>
+                <th className="py-2.5 px-3">Key / Val Size</th>
+                <th className="py-2.5 px-3">Description</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-white/5 font-mono">
               {maps.map((m) => {
                 const percent = Math.min(100, (m.currentEntries / m.maxEntries) * 100);
                 return (
-                  <tr key={m.name} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '14px 12px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent-cyan)' }}>
+                  <tr key={m.name} className="hover:bg-slate-900/50 transition-colors">
+                    <td className="py-3 px-3 font-bold text-cyan-400">
                       {m.name}
                     </td>
-                    <td style={{ padding: '14px 12px', fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--accent-purple)' }}>
+                    <td className="py-3 px-3 text-purple-400 text-xs">
                       {m.type}
                     </td>
-                    <td style={{ padding: '14px 12px', minWidth: '180px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                        <span style={{ color: '#fff' }}>{m.currentEntries.toLocaleString()}</span>
-                        <span style={{ color: 'var(--text-muted)' }}>{m.maxEntries.toLocaleString()} max</span>
+                    <td className="py-3 px-3 min-w-[180px]">
+                      <div className="flex justify-between text-[11px] mb-1">
+                        <span className="text-white">{m.currentEntries.toLocaleString()}</span>
+                        <span className="text-slate-500">{m.maxEntries.toLocaleString()} max</span>
                       </div>
-                      <div style={{ height: '6px', width: '100%', background: 'var(--bg-tertiary)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
                         <div
-                          style={{
-                            height: '100%',
-                            width: `${Math.max(2, percent)}%`,
-                            background: percent > 80 ? 'var(--accent-crimson)' : 'linear-gradient(90deg, var(--accent-cyan), var(--accent-emerald))',
-                            borderRadius: '3px',
-                          }}
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            percent > 80
+                              ? 'bg-rose-500'
+                              : 'bg-gradient-to-r from-cyan-400 to-emerald-400'
+                          }`}
+                          style={{ width: `${Math.max(2, percent)}%` }}
                         />
                       </div>
                     </td>
-                    <td style={{ padding: '14px 12px', fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <td className="py-3 px-3 text-slate-300">
                       {m.keySize}B / {m.valueSize}B
                     </td>
-                    <td style={{ padding: '14px 12px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                    <td className="py-3 px-3 text-slate-400 font-sans text-xs">
                       {m.description}
                     </td>
                   </tr>

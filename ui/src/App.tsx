@@ -1,117 +1,189 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Header } from './components/Header';
 import { MetricCards } from './components/MetricCards';
 import { FlowsTable } from './components/FlowsTable';
 import { ThreatsView } from './components/ThreatsView';
 import { PoliciesView } from './components/PoliciesView';
 import { DataplaneView } from './components/DataplaneView';
-import {
-  initialNodeStatus,
-  initialFlows,
-  initialSecurityAlerts,
-  initialPolicies,
-  ebpfMapsList,
-  generateRandomFlow,
-} from './mockData';
-import type { FlowRecord, NodeStatus, SecurityAlert, PolicyRule, EbpfMapInfo } from './types';
+import { KwallApiClient, KwallTelemetryStreamer } from './services';
+import type {
+  IKwallNodeStatus,
+  IKwallFlowRecord,
+  IKwallSecurityAlert,
+  IKwallPolicyRule,
+  IKwallEbpfMap,
+  IKwallBlacklistEntry,
+  StreamConnectionStatus,
+} from './types';
 import { ShieldAlert, Cpu, ArrowUpRight } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
-  const [status, setStatus] = useState<NodeStatus>(initialNodeStatus);
-  const [flows, setFlows] = useState<FlowRecord[]>(initialFlows);
-  const [alerts] = useState<SecurityAlert[]>(initialSecurityAlerts);
-  const [policies] = useState<PolicyRule[]>(initialPolicies);
-  const [maps] = useState<EbpfMapInfo[]>(ebpfMapsList);
+  const [streamStatus, setStreamStatus] = useState<StreamConnectionStatus>('OFFLINE');
 
-  // Background live streaming simulator
+  // Client Services (Divide and conquer architecture)
+  const apiClient = useMemo(() => new KwallApiClient(), []);
+  const streamer = useMemo(() => new KwallTelemetryStreamer(), []);
+
+  // State
+  const [status, setStatus] = useState<IKwallNodeStatus | null>(null);
+  const [flows, setFlows] = useState<IKwallFlowRecord[]>([]);
+  const [alerts, setAlerts] = useState<IKwallSecurityAlert[]>([]);
+  const [policies, setPolicies] = useState<IKwallPolicyRule[]>([]);
+  const [maps, setMaps] = useState<IKwallEbpfMap[]>([]);
+  const [blacklist, setBlacklist] = useState<IKwallBlacklistEntry[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Initial data loading from API Client
   useEffect(() => {
-    if (!isStreaming) return;
+    let isMounted = true;
+    setIsLoading(true);
 
-    const interval = setInterval(() => {
-      const newFlow = generateRandomFlow();
-      setFlows((prev) => [newFlow, ...prev.slice(0, 59)]);
+    Promise.all([
+      apiClient.fetchNodeStatus(),
+      apiClient.fetchThreatAlerts(),
+      apiClient.fetchPolicies(),
+      apiClient.fetchEbpfMaps(),
+      apiClient.fetchBlacklist(),
+    ])
+      .then(([nodeStatus, threatAlerts, pols, ebpfMaps, bl]) => {
+        if (!isMounted) return;
+        setStatus(nodeStatus);
+        setAlerts(threatAlerts);
+        setPolicies(pols);
+        setMaps(ebpfMaps);
+        setBlacklist(bl);
+      })
+      .catch((err) => {
+        console.error('Initial data fetch error:', err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
 
-      setStatus((prev) => ({
-        ...prev,
-        totalPackets: prev.totalPackets + newFlow.packets,
-        totalBytes: prev.totalBytes + newFlow.bytes,
-        droppedPackets: newFlow.verdict === 'DROP' ? prev.droppedPackets + newFlow.packets : prev.droppedPackets,
-      }));
-    }, 1800);
+    return () => {
+      isMounted = false;
+    };
+  }, [apiClient]);
 
-    return () => clearInterval(interval);
-  }, [isStreaming]);
+  // Live eBPF Telemetry Streaming with capped sliding memory window
+  useEffect(() => {
+    if (!isStreaming) {
+      streamer.stop();
+      return;
+    }
+
+    streamer.start();
+
+    const subscription = streamer.subscribe(
+      (flow: IKwallFlowRecord) => {
+        // High-performance bounded sliding window (Divide & conquer memory management)
+        setFlows((prev) => [flow, ...prev.slice(0, 99)]);
+
+        setStatus((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            totalPackets: prev.totalPackets + flow.packets,
+            totalBytes: prev.totalBytes + flow.bytes,
+            droppedPackets: flow.verdict === 'DROP' ? prev.droppedPackets + flow.packets : prev.droppedPackets,
+          };
+        });
+      },
+      (newStatus: StreamConnectionStatus) => {
+        setStreamStatus(newStatus);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+      streamer.stop();
+    };
+  }, [isStreaming, streamer]);
+
+  // Mutators for blacklist
+  const handleAddBlacklist = useCallback(
+    async (ip: string, reason: string) => {
+      const entry = await apiClient.addToBlacklist(ip, reason);
+      setBlacklist((prev) => [entry, ...prev]);
+    },
+    [apiClient]
+  );
+
+  const handleRemoveBlacklist = useCallback(
+    async (ip: string) => {
+      await apiClient.removeFromBlacklist(ip);
+      setBlacklist((prev) => prev.filter((item) => item.ip !== ip));
+    },
+    [apiClient]
+  );
+
+  if (isLoading || !status) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-4" role="status" aria-live="polite">
+        <div className="w-12 h-12 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+        <span className="text-sm font-mono tracking-wider">INITIALIZING KWALL EBPF DATAPLANE CLIENT...</span>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
       <Header
         status={status}
+        streamStatus={streamStatus}
         isStreaming={isStreaming}
         onToggleStreaming={() => setIsStreaming(!isStreaming)}
         activeTab={activeTab}
         onSelectTab={setActiveTab}
       />
 
-      <main style={{ flex: 1, padding: '28px 24px', maxWidth: '1600px', width: '100%', margin: '0 auto' }}>
+      <main className="flex-1 px-4 sm:px-6 py-6 max-w-7xl w-full mx-auto" id="main-content" tabIndex={-1}>
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          Current view: {activeTab}. Live streaming status is {streamStatus}.
+        </div>
+
         {activeTab === 'overview' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <div className="flex flex-col gap-6">
             {/* Top Metric Cards */}
             <MetricCards status={status} />
 
             {/* Realtime Streams Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', alignItems: 'start' }}>
-              {/* Flows Stream Preview */}
-              <div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              {/* Flows Stream Preview (2 cols on large screens) */}
+              <div className="lg:col-span-2">
                 <FlowsTable flows={flows.slice(0, 15)} />
               </div>
 
-              {/* Side Panels: Active Threat Stream & Kernel Status */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {/* Side Panels */}
+              <div className="flex flex-col gap-6">
                 {/* Threat Center Quick Glance */}
-                <div className="glass-panel" style={{ padding: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <ShieldAlert size={18} color="var(--accent-crimson)" />
-                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>Recent Kernel Alerts</h3>
+                <div className="glass-panel p-5 shadow-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4 text-rose-500" />
+                      <h3 className="text-sm font-bold text-white">Recent Security Alerts</h3>
                     </div>
                     <button
                       onClick={() => setActiveTab('threats')}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--accent-cyan)',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '2px',
-                      }}
+                      className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400 rounded"
                     >
-                      View All <ArrowUpRight size={14} />
+                      View All <ArrowUpRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div className="flex flex-col gap-2.5">
                     {alerts.slice(0, 3).map((a) => (
                       <div
                         key={a.id}
-                        style={{
-                          padding: '12px',
-                          borderRadius: '6px',
-                          background: 'var(--bg-secondary)',
-                          border: '1px solid var(--border-subtle)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '4px',
-                        }}
+                        className="p-3 rounded-lg bg-slate-900 border border-white/10 flex flex-col gap-1"
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>{a.type}</span>
-                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{a.timestamp}</span>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-white">{a.type}</span>
+                          <span className="text-[10px] font-mono text-slate-500">{a.timestamp}</span>
                         </div>
-                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                        <span className="text-[11px] text-slate-400 truncate">
                           Target: {a.podName}
                         </span>
                       </div>
@@ -120,27 +192,19 @@ export const App: React.FC = () => {
                 </div>
 
                 {/* Netkit Fastpath status */}
-                <div className="glass-panel" style={{ padding: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                    <Cpu size={18} color="var(--accent-cyan)" />
-                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>Netkit Topology</h3>
+                <div className="glass-panel p-5 shadow-lg">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Cpu className="w-4 h-4 text-cyan-400" />
+                    <h3 className="text-sm font-bold text-white">Netkit Topology</h3>
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                    Direct BPF redirect fastpath is established across <strong>{status.activeInterfaces.length} interfaces</strong> with 0 skb copies.
+                  <div className="text-xs text-slate-400 leading-relaxed">
+                    Direct BPF redirect fastpath is established across <strong className="text-white">{status.activeInterfaces.length} interfaces</strong> with 0 skb copies.
                   </div>
-                  <div style={{ marginTop: '14px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <div className="mt-3.5 flex gap-1.5 flex-wrap">
                     {status.activeInterfaces.map((iface) => (
                       <span
                         key={iface}
-                        style={{
-                          fontSize: '11px',
-                          fontFamily: 'var(--font-mono)',
-                          padding: '3px 8px',
-                          borderRadius: '4px',
-                          background: 'var(--bg-secondary)',
-                          border: '1px solid var(--border-medium)',
-                          color: 'var(--accent-cyan)',
-                        }}
+                        className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-white/10 text-cyan-400"
                       >
                         {iface}
                       </span>
@@ -153,17 +217,28 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'flows' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div className="flex flex-col gap-6">
             <MetricCards status={status} />
             <FlowsTable flows={flows} />
           </div>
         )}
 
-        {activeTab === 'threats' && <ThreatsView alerts={alerts} />}
+        {activeTab === 'threats' && (
+          <ThreatsView
+            alerts={alerts}
+            blacklist={blacklist}
+            onAddBlacklist={handleAddBlacklist}
+            onRemoveBlacklist={handleRemoveBlacklist}
+          />
+        )}
 
-        {activeTab === 'policies' && <PoliciesView policies={policies} />}
+        {activeTab === 'policies' && (
+          <PoliciesView policies={policies} apiClient={apiClient} />
+        )}
 
-        {activeTab === 'dataplane' && <DataplaneView status={status} maps={maps} />}
+        {activeTab === 'dataplane' && (
+          <DataplaneView status={status} maps={maps} />
+        )}
       </main>
     </div>
   );

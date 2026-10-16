@@ -1,123 +1,98 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield } from 'lucide-react';
-import type { PolicyRule } from '../types';
+import type { IKwallPolicyRule, IKwallPolicyCompilationResult } from '../types';
+import type { IKwallApiClient } from '../services';
 
-interface PoliciesViewProps {
-  policies: PolicyRule[];
+export interface IPoliciesViewProps {
+  policies: IKwallPolicyRule[];
+  apiClient: IKwallApiClient;
 }
 
-export const PoliciesView: React.FC<PoliciesViewProps> = ({ policies }) => {
-  const [selectedPolicy, setSelectedPolicy] = useState<PolicyRule>(policies[0]);
+export const PoliciesView: React.FC<IPoliciesViewProps> = ({ policies, apiClient }) => {
+  const [selectedPolicy, setSelectedPolicy] = useState<IKwallPolicyRule | null>(policies[0] || null);
   const [activeTab, setActiveTab] = useState<'rules' | 'compiler_ir' | 'raw_crd'>('rules');
+  const [compilationResult, setCompilationResult] = useState<IKwallPolicyCompilationResult | null>(null);
+  const [isCompiling, setIsCompiling] = useState<boolean>(false);
 
-  // Simulated compiled eBPF IR
-  const compiledBpfRules = [
-    {
-      map: 'kw_policies',
-      key: '{ src_id: 1042, dst_id: 1045, port: 8080, proto: 6 }',
-      val: '{ action: PASS, flags: 0x01, counter_idx: 12 }',
-      state: 'VERIFIED_ACTIVE',
-    },
-    {
-      map: 'kw_policies',
-      key: '{ src_id: 1045, dst_id: 1099, port: 443, proto: 6 }',
-      val: '{ action: PASS, flags: 0x01, counter_idx: 14 }',
-      state: 'VERIFIED_ACTIVE',
-    },
-    {
-      map: 'kw_policies',
-      key: '{ src_id: 2, dst_id: 1042, port: 22, proto: 6 }',
-      val: '{ action: DROP, flags: 0x02, counter_idx: 99 }',
-      state: 'VERIFIED_ACTIVE',
-    },
-    {
-      map: 'kw_policies',
-      key: '{ src_id: *, dst_id: *, port: *, proto: * }',
-      val: '{ action: DROP, flags: 0x00, counter_idx: 0 }',
-      state: 'DEFAULT_DENY_FALLTHROUGH',
-    },
-  ];
+  useEffect(() => {
+    if (selectedPolicy) {
+      let isMounted = true;
+      setIsCompiling(true);
+      apiClient.compilePolicy(selectedPolicy)
+        .then((res) => {
+          if (isMounted) setCompilationResult(res);
+        })
+        .finally(() => {
+          if (isMounted) setIsCompiling(false);
+        });
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [selectedPolicy, apiClient]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-6">
       {/* Top Header Summary */}
-      <div className="glass-panel" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="glass-panel p-6 shadow-xl">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Shield size={22} color="var(--accent-purple)" />
+            <h2 className="text-xl font-extrabold text-white flex items-center gap-2.5">
+              <Shield className="w-6 h-6 text-purple-400" />
               KWALL Distributed Policy Engine
             </h2>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+            <p className="text-xs text-slate-400 mt-1">
               Compiles Kubernetes NetworkPolicies & KWALL SecurityPolicies into deterministic identity-based eBPF hash tables.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <div style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-subtle)',
-              fontSize: '12px',
-            }}>
-              <span style={{ color: 'var(--text-muted)' }}>Active Policies: </span>
-              <strong style={{ color: '#fff' }}>{policies.length}</strong>
+          <div className="flex gap-3">
+            <div className="px-4 py-2 rounded-lg bg-slate-900 border border-white/10 text-xs">
+              <span className="text-slate-400">Active Policies: </span>
+              <strong className="text-white font-mono">{policies.length}</strong>
             </div>
-            <div style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-subtle)',
-              fontSize: '12px',
-            }}>
-              <span style={{ color: 'var(--text-muted)' }}>Compiler Latency: </span>
-              <strong style={{ color: 'var(--accent-emerald)' }}>0.42 ms</strong>
+            <div className="px-4 py-2 rounded-lg bg-slate-900 border border-white/10 text-xs">
+              <span className="text-slate-400">Compilation Latency: </span>
+              <strong className="text-emerald-400 font-mono">
+                {compilationResult ? `${compilationResult.compilationLatencyMs} ms` : 'calculating...'}
+              </strong>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main 2-column layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: '24px', alignItems: 'start' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Left Column: Policy List */}
-        <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <div className="glass-panel p-5 flex flex-col gap-3 shadow-lg">
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
             Enforced Policies ({policies.length})
           </h3>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="flex flex-col gap-2">
             {policies.map((pol) => {
               const isSelected = selectedPolicy?.id === pol.id;
               return (
                 <div
                   key={pol.id}
                   onClick={() => setSelectedPolicy(pol)}
-                  style={{
-                    padding: '14px 16px',
-                    borderRadius: '8px',
-                    background: isSelected ? 'rgba(168, 85, 247, 0.12)' : 'var(--bg-secondary)',
-                    border: isSelected ? '1px solid var(--accent-purple)' : '1px solid var(--border-subtle)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
+                  className={`p-3.5 rounded-xl cursor-pointer transition-all border ${
+                    isSelected
+                      ? 'bg-purple-500/15 border-purple-400 shadow-md shadow-purple-500/10'
+                      : 'bg-slate-900/60 border-white/10 hover:border-white/20'
+                  }`}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 700, color: '#fff', fontSize: '13px' }}>{pol.name}</span>
-                    <span style={{
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      background: 'rgba(16, 185, 129, 0.15)',
-                      color: 'var(--accent-emerald)',
-                      border: '1px solid var(--accent-emerald)',
-                    }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-white text-xs truncate max-w-[200px]" title={pol.name}>
+                      {pol.name}
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                       {pol.state}
                     </span>
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>ns: <strong>{pol.namespace}</strong></span>
-                    <span>app: <strong>{pol.targetApp}</strong></span>
+                  <div className="text-[11px] text-slate-400 flex justify-between font-mono">
+                    <span>ns: <strong className="text-slate-300">{pol.namespace}</strong></span>
+                    <span>app: <strong className="text-cyan-400">{pol.targetApp}</strong></span>
                     <span>{pol.activeNodes} nodes</span>
                   </div>
                 </div>
@@ -128,102 +103,61 @@ export const PoliciesView: React.FC<PoliciesViewProps> = ({ policies }) => {
 
         {/* Right Column: Selected Policy Deep Dive */}
         {selectedPolicy && (
-          <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px' }}>
+          <div className="lg:col-span-2 glass-panel p-6 flex flex-col gap-5 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between border-b border-white/10 pb-4 gap-3">
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff' }}>{selectedPolicy.name}</h3>
-                  <span style={{
-                    fontSize: '11px',
-                    fontFamily: 'var(--font-mono)',
-                    background: 'var(--bg-secondary)',
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    color: 'var(--accent-purple)',
-                  }}>
+                <div className="flex items-center gap-2.5">
+                  <h3 className="text-lg font-bold text-white">{selectedPolicy.name}</h3>
+                  <span className="text-xs font-mono bg-purple-500/10 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded">
                     app={selectedPolicy.targetApp}
                   </span>
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  Namespace: <span style={{ color: '#fff' }}>{selectedPolicy.namespace}</span> • Sync Status: Synchronized across {selectedPolicy.activeNodes} netkit worker nodes
+                <div className="text-xs text-slate-400 mt-1">
+                  Namespace: <span className="text-white font-medium">{selectedPolicy.namespace}</span> • Synchronized across {selectedPolicy.activeNodes} netkit worker nodes
                 </div>
               </div>
 
               {/* Sub-tabs */}
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button
-                  onClick={() => setActiveTab('rules')}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    border: 'none',
-                    background: activeTab === 'rules' ? 'var(--accent-purple)' : 'var(--bg-secondary)',
-                    color: activeTab === 'rules' ? '#fff' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Rules Spec
-                </button>
-                <button
-                  onClick={() => setActiveTab('compiler_ir')}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    border: 'none',
-                    background: activeTab === 'compiler_ir' ? 'var(--accent-purple)' : 'var(--bg-secondary)',
-                    color: activeTab === 'compiler_ir' ? '#fff' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  eBPF IR Output
-                </button>
-                <button
-                  onClick={() => setActiveTab('raw_crd')}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    border: 'none',
-                    background: activeTab === 'raw_crd' ? 'var(--accent-purple)' : 'var(--bg-secondary)',
-                    color: activeTab === 'raw_crd' ? '#fff' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  CRD YAML
-                </button>
+              <div className="flex gap-1.5 bg-slate-900 border border-white/10 p-0.5 rounded-lg text-xs">
+                {(['rules', 'compiler_ir', 'raw_crd'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setActiveTab(t)}
+                    className={`px-3 py-1 rounded font-semibold transition-all ${
+                      activeTab === t ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {t === 'rules' ? 'Rules Spec' : t === 'compiler_ir' ? 'eBPF IR Output' : 'CRD YAML'}
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Tab: Rules View */}
             {activeTab === 'rules' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="flex flex-col gap-5">
                 <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: '8px', textTransform: 'uppercase' }}>
+                  <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2">
                     Ingress Rules ({selectedPolicy.ingressRules.length})
                   </h4>
                   {selectedPolicy.ingressRules.length === 0 ? (
-                    <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    <div className="p-3 bg-slate-900/60 rounded-lg text-xs text-slate-500">
                       No ingress permitted (Default Deny).
                     </div>
                   ) : (
                     selectedPolicy.ingressRules.map((r, idx) => (
-                      <div key={idx} style={{ padding: '14px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                            Allowed Sources: <strong style={{ color: '#fff' }}>{r.from.join(', ')}</strong>
+                      <div key={idx} className="p-3.5 bg-slate-900/80 rounded-xl border border-white/10 mb-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-slate-300">
+                            Allowed Sources: <strong className="text-white font-mono">{r.from.join(', ')}</strong>
                           </span>
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-emerald)', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
                             {r.action}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div className="flex gap-2">
                           {r.ports.map((p, pIdx) => (
-                            <span key={pIdx} style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', padding: '2px 8px', background: 'var(--bg-tertiary)', borderRadius: '4px', color: 'var(--accent-cyan)' }}>
+                            <span key={pIdx} className="text-[11px] font-mono px-2 py-0.5 bg-slate-950 rounded text-cyan-400 border border-white/10">
                               Port {p.port}/{p.protocol}
                             </span>
                           ))}
@@ -234,27 +168,27 @@ export const PoliciesView: React.FC<PoliciesViewProps> = ({ policies }) => {
                 </div>
 
                 <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: '8px', textTransform: 'uppercase' }}>
+                  <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2">
                     Egress Rules ({selectedPolicy.egressRules.length})
                   </h4>
                   {selectedPolicy.egressRules.length === 0 ? (
-                    <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    <div className="p-3 bg-slate-900/60 rounded-lg text-xs text-slate-500">
                       No egress permitted (Default Deny).
                     </div>
                   ) : (
                     selectedPolicy.egressRules.map((r, idx) => (
-                      <div key={idx} style={{ padding: '14px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                            Allowed Destinations: <strong style={{ color: '#fff' }}>{r.to.join(', ')}</strong>
+                      <div key={idx} className="p-3.5 bg-slate-900/80 rounded-xl border border-white/10 mb-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-slate-300">
+                            Allowed Destinations: <strong className="text-white font-mono">{r.to.join(', ')}</strong>
                           </span>
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-emerald)', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
                             {r.action}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div className="flex gap-2">
                           {r.ports.map((p, pIdx) => (
-                            <span key={pIdx} style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', padding: '2px 8px', background: 'var(--bg-tertiary)', borderRadius: '4px', color: 'var(--accent-cyan)' }}>
+                            <span key={pIdx} className="text-[11px] font-mono px-2 py-0.5 bg-slate-950 rounded text-cyan-400 border border-white/10">
                               Port {p.port}/{p.protocol}
                             </span>
                           ))}
@@ -269,59 +203,42 @@ export const PoliciesView: React.FC<PoliciesViewProps> = ({ policies }) => {
             {/* Tab: Compiler IR */}
             {activeTab === 'compiler_ir' && (
               <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                  Aya BPF map entries generated by <code style={{ color: 'var(--accent-cyan)' }}>kwall-policy::PolicyOptimizer</code>:
+                <div className="text-xs text-slate-400 mb-3">
+                  Dynamically compiled Aya BPF hash table entries from <code className="text-cyan-400 font-mono">kwall-policy::PolicyCompiler</code>:
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {compiledBpfRules.map((rule, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        padding: '12px 14px',
-                        borderRadius: '6px',
-                        background: 'var(--bg-primary)',
-                        border: '1px solid var(--border-subtle)',
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '12px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--accent-purple)' }}>{rule.map}</span>
-                        <span style={{ fontSize: '10px', color: rule.state.includes('DROP') ? 'var(--accent-crimson)' : 'var(--accent-emerald)' }}>
-                          {rule.state}
-                        </span>
+                {isCompiling ? (
+                  <div className="py-8 text-center text-xs text-slate-400">Compiling policy rules into eBPF IR...</div>
+                ) : (
+                  <div className="flex flex-col gap-2 font-mono text-xs">
+                    {compilationResult?.bpfRules.map((rule, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 rounded-lg bg-slate-950 border border-white/10 flex flex-col gap-1.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-purple-400 font-bold">{rule.mapName}</span>
+                          <span className={`text-[10px] ${rule.verificationStatus.includes('DROP') ? 'text-rose-400' : 'text-emerald-400'}`}>
+                            {rule.verificationStatus}
+                          </span>
+                        </div>
+                        <div className="text-slate-300">
+                          <strong className="text-slate-500">KEY: </strong>
+                          {rule.keyRepresentation}
+                        </div>
+                        <div className="text-cyan-400">
+                          <strong className="text-slate-500">VAL: </strong>
+                          {rule.valueRepresentation}
+                        </div>
                       </div>
-                      <div style={{ color: 'var(--text-secondary)' }}>
-                        <strong style={{ color: 'var(--text-muted)' }}>KEY: </strong>
-                        {rule.key}
-                      </div>
-                      <div style={{ color: 'var(--accent-cyan)' }}>
-                        <strong style={{ color: 'var(--text-muted)' }}>VAL: </strong>
-                        {rule.val}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
             {/* Tab: Raw CRD */}
             {activeTab === 'raw_crd' && (
-              <pre style={{
-                margin: 0,
-                padding: '16px',
-                borderRadius: '8px',
-                background: 'var(--bg-primary)',
-                border: '1px solid var(--border-subtle)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '12px',
-                color: 'var(--text-secondary)',
-                lineHeight: 1.6,
-                overflowX: 'auto',
-              }}>
+              <pre className="p-4 rounded-xl bg-slate-950 border border-white/10 font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed">
 {`apiVersion: kwall.io/v1alpha1
 kind: KWALLNetworkPolicy
 metadata:
