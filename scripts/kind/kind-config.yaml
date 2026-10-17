@@ -22,3 +22,13 @@ nodes:
         readOnly: true
       - hostPath: /sys/kernel/debug
         containerPath: /sys/kernel/debug
+  - role: worker
+    extraMounts:
+      - hostPath: /sys/fs/bpf
+        containerPath: /sys/fs/bpf
+        propagation: Bidirectional
+      - hostPath: /lib/modules
+        containerPath: /lib/modules
+        readOnly: true
+      - hostPath: /sys/kernel/debug
+        containerPath: /sys/kernel/debug
