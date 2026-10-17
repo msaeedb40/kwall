@@ -1,6 +1,6 @@
 # Custom Resource Definitions (CRDs) & Policy Engine
 
-KWALL extends Kubernetes with four custom resources under the API group `kwall.io/v1alpha1`. These declarative resources allow security operators to define network policies, threat defenses, DDoS mitigation limits, and flow telemetry rules.
+KWALL extends Kubernetes with five custom resources under the API group `kwall.io/v1alpha1`. These declarative resources allow security operators to define network policies, threat defenses, runtime process security, DDoS mitigation limits, and flow telemetry rules.
 
 ---
 
@@ -84,7 +84,36 @@ spec:
 
 ---
 
-## 3. `KWALLDDoSPolicy`
+## 3. `KWALLRuntimePolicy`
+
+`KWALLRuntimePolicy` enforces Linux LSM and BPF runtime integrity on workloads, restricting execution to verified binary hashes, preventing container escape vectors, and blocking execution from untrusted ephemeral directories (e.g., `/tmp`, `/dev/shm`).
+
+### Spec Definition
+
+```yaml
+apiVersion: kwall.io/v1alpha1
+kind: KWALLRuntimePolicy
+metadata:
+  name: strict-workload-guard
+  namespace: production
+spec:
+  endpoint_selector:
+    match_labels:
+      tier: payment-processor
+  allowed_binaries:
+    - /usr/local/bin/payment-service
+    - /usr/bin/busybox
+  denied_paths:
+    - /tmp
+    - /dev/shm
+  enforce_binary_hashes: true
+  block_container_escape: true
+  action: Block
+```
+
+---
+
+## 4. `KWALLDDoSPolicy`
 
 `KWALLDDoSPolicy` applies kernel-level rate-limiting and SYN flood defenses at wire-speed directly in the eBPF XDP or TC layer before socket allocation occurs.
 
@@ -115,7 +144,7 @@ spec:
 
 ---
 
-## 4. `KWALLFlowPolicy`
+## 5. `KWALLFlowPolicy`
 
 `KWALLFlowPolicy` configures dynamic flow telemetry, sampling ratios, and export destinations without modifying the underlying network configuration.
 

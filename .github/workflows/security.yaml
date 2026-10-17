@@ -2,9 +2,9 @@ name: KWALL Security Audit
 
 on:
   push:
-    branches: [main]
+    branches: [main, mybuild]
   pull_request:
-    branches: [main]
+    branches: [main, mybuild]
   schedule:
     - cron: '0 0 * * 1'
 

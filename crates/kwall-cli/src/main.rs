@@ -105,18 +105,12 @@ enum SecurityAction {
 }
 
 async fn query_agent(req: AgentRequest) -> Option<AgentResponse> {
-    if let Ok(mut stream) = UnixStream::connect(DEFAULT_SOCKET_PATH).await {
-        if let Ok(bytes) = serde_json::to_vec(&req) {
-            let _ = stream.write_all(&bytes).await;
-            let mut buf = vec![0u8; 8192];
-            if let Ok(n) = stream.read(&mut buf).await {
-                if let Ok(resp) = serde_json::from_slice::<AgentResponse>(&buf[..n]) {
-                    return Some(resp);
-                }
-            }
-        }
-    }
-    None
+    let mut stream = UnixStream::connect(DEFAULT_SOCKET_PATH).await.ok()?;
+    let bytes = serde_json::to_vec(&req).ok()?;
+    stream.write_all(&bytes).await.ok()?;
+    let mut buf = vec![0u8; 8192];
+    let n = stream.read(&mut buf).await.ok()?;
+    serde_json::from_slice::<AgentResponse>(&buf[..n]).ok()
 }
 
 #[tokio::main]
@@ -125,17 +119,30 @@ async fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Version => {
-            println!("KWALL eBPF Kubernetes Platform v{}", env!("CARGO_PKG_VERSION"));
+            println!(
+                "KWALL eBPF Kubernetes Platform v{}",
+                env!("CARGO_PKG_VERSION")
+            );
             println!("Kernel Dataplane: eBPF + netkit (CO-RE enabled)");
             println!("Rust Aya Runtime: Active");
         }
         Commands::Status => {
-            println!("Connecting to KWALL Node Agent on {}...", DEFAULT_SOCKET_PATH);
+            println!(
+                "Connecting to KWALL Node Agent on {}...",
+                DEFAULT_SOCKET_PATH
+            );
             match query_agent(AgentRequest::GetStatus).await {
                 Some(AgentResponse::Status(status)) => {
                     println!("Node Name:          {}", status.node_name);
                     println!("Kernel Version:     {}", status.kernel_version);
-                    println!("eBPF Dataplane:     {}", if status.ebpf_ready { "READY" } else { "NOT READY" });
+                    println!(
+                        "eBPF Dataplane:     {}",
+                        if status.ebpf_ready {
+                            "READY"
+                        } else {
+                            "NOT READY"
+                        }
+                    );
                     println!("Active Interfaces:  {:?}", status.active_interfaces);
                     println!("Workload Endpoints: {}", status.endpoints_count);
                     println!("Active Policies:    {}", status.policies_count);
@@ -149,17 +156,39 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::Ebpf(args) => match args.action {
             EbpfAction::List => {
-                println!("{:<20} {:<12} {:<15} {:<10}", "PROGRAM", "TYPE", "HOOK", "STATUS");
-                println!("{:<20} {:<12} {:<15} {:<10}", "kwall_xdp_ingress", "XDP", "Driver/Generic", "Loaded");
-                println!("{:<20} {:<12} {:<15} {:<10}", "kwall_tc_ingress", "Classifier", "TC / TCX", "Loaded");
-                println!("{:<20} {:<12} {:<15} {:<10}", "kwall_tc_egress", "Classifier", "TC / TCX", "Loaded");
+                println!(
+                    "{:<20} {:<12} {:<15} {:<10}",
+                    "PROGRAM", "TYPE", "HOOK", "STATUS"
+                );
+                println!(
+                    "{:<20} {:<12} {:<15} {:<10}",
+                    "kwall_xdp_ingress", "XDP", "Driver/Generic", "Loaded"
+                );
+                println!(
+                    "{:<20} {:<12} {:<15} {:<10}",
+                    "kwall_tc_ingress", "Classifier", "TC / TCX", "Loaded"
+                );
+                println!(
+                    "{:<20} {:<12} {:<15} {:<10}",
+                    "kwall_tc_egress", "Classifier", "TC / TCX", "Loaded"
+                );
             }
             EbpfAction::Maps => {
                 println!("{:<22} {:<15} {:<12}", "MAP NAME", "TYPE", "MAX ENTRIES");
                 println!("{:<22} {:<15} {:<12}", "kw_endpoints", "HashMap", "65,536");
                 println!("{:<22} {:<15} {:<12}", "kw_policies", "HashMap", "65,536");
-                println!("{:<22} {:<15} {:<12}", "kw_conntrack", "LruHashMap", "262,144");
-                println!("{:<22} {:<15} {:<12}", "kw_ip_blacklist", "HashMap", "65,536");
+                println!(
+                    "{:<22} {:<15} {:<12}",
+                    "kw_conntrack", "LruHashMap", "262,144"
+                );
+                println!(
+                    "{:<22} {:<15} {:<12}",
+                    "kw_ip_blacklist", "HashMap", "65,536"
+                );
+                println!(
+                    "{:<22} {:<15} {:<12}",
+                    "kw_rate_limits", "LruHashMap", "65,536"
+                );
                 println!("{:<22} {:<15} {:<12}", "kw_flow_events", "RingBuf", "1 MB");
                 println!("{:<22} {:<15} {:<12}", "kw_sec_events", "RingBuf", "512 KB");
             }
@@ -183,7 +212,9 @@ async fn main() -> anyhow::Result<()> {
         Commands::Policy(args) => match args.action {
             PolicyAction::List => {
                 println!("Querying active policies from agent...");
-                println!("Default Policy: Ingress Allow Host, Egress Allow All, Pod-to-Pod Policy-Driven");
+                println!(
+                    "Default Policy: Ingress Allow Host, Egress Allow All, Pod-to-Pod Policy-Driven"
+                );
             }
             PolicyAction::Validate { file } => {
                 println!("Validating policy file: {}...", file);

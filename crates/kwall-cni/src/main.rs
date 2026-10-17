@@ -1,7 +1,7 @@
-use std::env;
-use std::io::Read;
 use anyhow::Result;
 use kwall_cni::{create_netkit_pair, notify_agent_register, notify_agent_unregister};
+use std::env;
+use std::io::Read;
 
 #[tokio::main]
 async fn main() -> Result<()> {

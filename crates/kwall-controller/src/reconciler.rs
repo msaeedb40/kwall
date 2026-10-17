@@ -1,6 +1,8 @@
-use kwall_api::{KWALLNetworkPolicy, KWALLSecurityPolicy, PolicyStatus};
-use kwall_common::time::current_time_ns;
+use kwall_api::{
+    KWALLDDoSPolicy, KWALLNetworkPolicy, KWALLRuntimePolicy, KWALLSecurityPolicy, PolicyStatus,
+};
 use kwall_common::Result;
+use kwall_common::time::current_time_ns;
 use tracing::info;
 
 pub struct PolicyReconciler;
@@ -41,13 +43,41 @@ impl PolicyReconciler {
             error_message: None,
         })
     }
+
+    pub fn reconcile_runtime_policy(policy: &KWALLRuntimePolicy) -> Result<PolicyStatus> {
+        let name = policy.metadata.name.as_deref().unwrap_or("unnamed");
+        let ns = policy.metadata.namespace.as_deref().unwrap_or("default");
+
+        info!("Reconciling KWALLRuntimePolicy: {}/{}", ns, name);
+
+        Ok(PolicyStatus {
+            state: "Enforced".to_string(),
+            active_nodes: 1,
+            last_applied_time: Some(format!("{}", current_time_ns())),
+            error_message: None,
+        })
+    }
+
+    pub fn reconcile_ddos_policy(policy: &KWALLDDoSPolicy) -> Result<PolicyStatus> {
+        let name = policy.metadata.name.as_deref().unwrap_or("unnamed");
+        let ns = policy.metadata.namespace.as_deref().unwrap_or("default");
+
+        info!("Reconciling KWALLDDoSPolicy: {}/{}", ns, name);
+
+        Ok(PolicyStatus {
+            state: "Enforced".to_string(),
+            active_nodes: 1,
+            last_applied_time: Some(format!("{}", current_time_ns())),
+            error_message: None,
+        })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwall_api::{EndpointSelector, KWALLNetworkPolicySpec};
     use kube::core::ObjectMeta;
+    use kwall_api::{EndpointSelector, KWALLNetworkPolicySpec};
     use std::collections::BTreeMap;
 
     #[test]

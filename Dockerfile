@@ -25,7 +25,7 @@ COPY .cargo .cargo
 COPY crates ./crates
 
 # Build userspace release binaries
-RUN cargo build --workspace --release
+RUN cargo build --workspace --exclude kwall-ebpf --release
 
 # ------------------------------------------------------------
 # Runtime stage

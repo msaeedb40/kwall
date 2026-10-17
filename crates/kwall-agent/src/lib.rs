@@ -40,7 +40,8 @@ mod tests {
             ifindex: 3,
         };
 
-        let resp = server::handle_request(req, state.clone(), manager.clone(), "6.8.0-test".into()).await;
+        let resp =
+            server::handle_request(req, state.clone(), manager.clone(), "6.8.0-test".into()).await;
         match resp {
             AgentResponse::Success => {}
             _ => panic!("Expected Success"),
@@ -48,7 +49,8 @@ mod tests {
 
         // Query status
         let req_status = AgentRequest::GetStatus;
-        let resp_status = server::handle_request(req_status, state, manager, "6.8.0-test".into()).await;
+        let resp_status =
+            server::handle_request(req_status, state, manager, "6.8.0-test".into()).await;
         match resp_status {
             AgentResponse::Status(s) => {
                 assert_eq!(s.endpoints_count, 1);

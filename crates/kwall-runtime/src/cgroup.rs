@@ -28,7 +28,10 @@ pub fn parse_cgroup_path(path: &str) -> ContainerCgroupInfo {
             }
 
             // Search for cri-containerd-<CID> or docker-<CID> or crio-<CID>
-            if part.contains("cri-containerd-") || part.contains("docker-") || part.contains("crio-") {
+            if part.contains("cri-containerd-")
+                || part.contains("docker-")
+                || part.contains("crio-")
+            {
                 let cid = part
                     .replace("cri-containerd-", "")
                     .replace("docker-", "")

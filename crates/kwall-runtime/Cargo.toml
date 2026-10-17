@@ -13,3 +13,6 @@ libc = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
+blake3 = { workspace = true }
+kwall-ebpf-common = { workspace = true, features = ["user"] }
+

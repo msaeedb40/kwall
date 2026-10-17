@@ -1,7 +1,7 @@
+use crate::types::{CidrRule, EndpointSelector, PolicyStatus, PortRule};
 use kube::CustomResource;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::types::{CidrRule, EndpointSelector, PolicyStatus, PortRule};
 
 #[derive(CustomResource, Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[kube(

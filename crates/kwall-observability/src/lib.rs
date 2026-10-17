@@ -4,7 +4,7 @@ pub mod metrics;
 pub mod traces;
 
 pub use correlation::{CorrelatedTelemetryEvent, TelemetryCorrelator};
-pub use logs::{format_flow_for_loki, format_security_event_for_loki, LokiFlowRecord};
+pub use logs::{LokiFlowRecord, format_flow_for_loki, format_security_event_for_loki};
 pub use metrics::PrometheusMetrics;
 pub use traces::{BpfSpanRecord, TraceContext};
 
@@ -40,9 +40,11 @@ mod tests {
     #[test]
     fn test_pipeline_integration() {
         let pipeline = TelemetryPipeline::new();
-        let mut flow = FlowEvent::default();
-        flow.bytes = 1024;
-        flow.action = 1; // DROP
+        let flow = FlowEvent {
+            bytes: 1024,
+            action: 1, // DROP
+            ..Default::default()
+        };
 
         let (event, span) = pipeline.correlator.process_flow(&flow);
         assert_eq!(event.action, "DROP");

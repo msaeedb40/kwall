@@ -1,5 +1,5 @@
-use std::collections::BTreeMap;
 use kwall_ebpf_common::IDENTITY_MIN_WORKLOAD;
+use std::collections::BTreeMap;
 
 pub struct IdentityAllocator;
 

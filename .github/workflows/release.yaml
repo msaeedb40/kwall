@@ -4,7 +4,8 @@ on:
   push:
     tags:
       - 'v*'
-
+  workflow_dispatch:
+ 
 jobs:
   release:
     name: Build & Package Release
@@ -17,7 +18,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build Userspace Release
-        run: cargo build --workspace --release
+        run: cargo build --workspace --exclude kwall-ebpf --release
 
       - name: Build and Package Docker Image
         run: |

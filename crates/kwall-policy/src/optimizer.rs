@@ -8,7 +8,7 @@ impl PolicyOptimizer {
         let original_count = rules.len();
         let mut sorted = rules;
         // Sort by priority descending (higher priority evaluated first)
-        sorted.sort_by(|a, b| b.priority.cmp(&a.priority));
+        sorted.sort_by_key(|a| std::cmp::Reverse(a.priority));
 
         let mut optimized: Vec<PolicyRuleIR> = Vec::with_capacity(original_count);
 
@@ -19,7 +19,9 @@ impl PolicyOptimizer {
                     && existing.src == rule.src
                     && existing.dst == rule.dst
                     && existing.action == rule.action
-                    && existing.ports.iter().any(|p| p.port == 0 && p.protocol == kwall_ebpf_common::L4Protocol::Unknown)
+                    && existing.ports.iter().any(|p| {
+                        p.port == 0 && p.protocol == kwall_ebpf_common::L4Protocol::Unknown
+                    })
             });
 
             if !is_shadowed {

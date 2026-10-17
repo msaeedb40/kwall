@@ -39,8 +39,14 @@ impl TelemetryCorrelator {
 
         // 3. Create OpenTelemetry trace span
         let action_str = if flow.action == 0 { "PASS" } else { "DROP" };
-        let src_ip_str = format!("{}.{}.{}.{}", flow.src_ip[0], flow.src_ip[1], flow.src_ip[2], flow.src_ip[3]);
-        let dst_ip_str = format!("{}.{}.{}.{}", flow.dst_ip[0], flow.dst_ip[1], flow.dst_ip[2], flow.dst_ip[3]);
+        let src_ip_str = format!(
+            "{}.{}.{}.{}",
+            flow.src_ip[0], flow.src_ip[1], flow.src_ip[2], flow.src_ip[3]
+        );
+        let dst_ip_str = format!(
+            "{}.{}.{}.{}",
+            flow.dst_ip[0], flow.dst_ip[1], flow.dst_ip[2], flow.dst_ip[3]
+        );
 
         let span = BpfSpanRecord::new_bpf_evaluation(
             "kwall.ebpf.flow",
@@ -102,13 +108,20 @@ mod tests {
         let metrics = Arc::new(PrometheusMetrics::new());
         let correlator = TelemetryCorrelator::new(metrics.clone());
 
-        let mut flow = FlowEvent::default();
-        flow.bytes = 2048;
-        flow.action = 0; // PASS
+        let flow = FlowEvent {
+            bytes: 2048,
+            action: 0, // PASS
+            ..Default::default()
+        };
 
         let (correlated, span) = correlator.process_flow(&flow);
         assert_eq!(correlated.action, "PASS");
         assert_eq!(span.status, "OK");
-        assert_eq!(metrics.packets_total.load(std::sync::atomic::Ordering::Relaxed), 1);
+        assert_eq!(
+            metrics
+                .packets_total
+                .load(std::sync::atomic::Ordering::Relaxed),
+            1
+        );
     }
 }

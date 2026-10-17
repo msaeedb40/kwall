@@ -1,9 +1,9 @@
+use kwall_common::{AgentRequest, AgentResponse, NodeStatus, Result};
+use kwall_dataplane::{DataplaneManager, DataplaneState};
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixListener;
 use tokio::sync::RwLock;
-use kwall_common::{AgentRequest, AgentResponse, NodeStatus, Result};
-use kwall_dataplane::{DataplaneManager, DataplaneState};
 use tracing::{error, info};
 
 pub struct AgentIpcServer {
@@ -52,7 +52,9 @@ impl AgentIpcServer {
                             }
                             let response = match serde_json::from_slice::<AgentRequest>(&buf[..n]) {
                                 Ok(req) => handle_request(req, state, manager, kver).await,
-                                Err(e) => AgentResponse::Error(format!("Invalid request JSON: {}", e)),
+                                Err(e) => {
+                                    AgentResponse::Error(format!("Invalid request JSON: {}", e))
+                                }
                             };
 
                             if let Ok(resp_bytes) = serde_json::to_vec(&response) {
@@ -94,10 +96,12 @@ pub async fn handle_request(
             AgentResponse::Status(status)
         }
         AgentRequest::ListEndpoints => {
-            AgentResponse::Endpoints(Vec::new())
+            let st = state.read().await;
+            AgentResponse::Endpoints(st.all_endpoints())
         }
         AgentRequest::ListPolicies => {
-            AgentResponse::Policies(Vec::new())
+            let st = state.read().await;
+            AgentResponse::Policies(st.all_policy_keys())
         }
         AgentRequest::GetMetrics => {
             let st = state.read().await;
@@ -129,6 +133,7 @@ pub async fn handle_request(
                 ipv4: ip,
                 ipv6: [0; 16],
                 flags: 0,
+                _pad: 0,
             };
             st.insert_endpoint(ip, ep);
             AgentResponse::Success

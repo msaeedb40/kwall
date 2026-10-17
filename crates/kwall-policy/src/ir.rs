@@ -8,6 +8,7 @@ pub enum IdentitySelector {
     World,
     Specific(u32),
     Group(Vec<u32>),
+    Cidr(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

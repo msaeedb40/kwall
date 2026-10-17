@@ -1,5 +1,5 @@
+use crate::constants::{DEFAULT_BPF_FS_PATH, DEFAULT_METRICS_ADDR, DEFAULT_SOCKET_PATH};
 use serde::{Deserialize, Serialize};
-use crate::constants::{DEFAULT_BPF_FS_PATH, DEFAULT_SOCKET_PATH, DEFAULT_METRICS_ADDR};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KwallConfig {

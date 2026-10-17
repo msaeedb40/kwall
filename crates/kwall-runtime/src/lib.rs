@@ -1,7 +1,7 @@
 pub mod cgroup;
 pub mod process;
 
-pub use cgroup::{parse_cgroup_path, ContainerCgroupInfo};
+pub use cgroup::{ContainerCgroupInfo, parse_cgroup_path};
 pub use process::{ProcessInfo, ProcessInspector};
 
 pub struct RuntimeInspector;
@@ -30,9 +30,14 @@ mod tests {
     fn test_current_process_inspection() {
         let inspector = RuntimeInspector::new();
         let my_pid = std::process::id();
-        let info = inspector.inspect_process(my_pid).expect("Failed to inspect self");
+        let info = inspector
+            .inspect_process(my_pid)
+            .expect("Failed to inspect self");
         assert_eq!(info.pid, my_pid);
         assert!(info.exe_path.is_some());
         assert!(!info.cmdline.is_empty());
+        assert!(info.exe_hash.is_some());
+        assert!(info.netns_inode.is_some());
+        assert!(!info.is_suspicious_path);
     }
 }

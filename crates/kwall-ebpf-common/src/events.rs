@@ -15,6 +15,20 @@ pub enum SecurityEventType {
     PolicyViolation = 10,
     ArpSpoofing = 11,
     DataExfiltrationAnomaly = 12,
+    MacAnomaly = 13,
+    IpSpoofing = 14,
+    NetworkScan = 15,
+    IcmpAbuse = 16,
+    ConnectionExhaustion = 17,
+    HttpAbuse = 18,
+    ApiAnomaly = 19,
+    FileIntegrityViolation = 20,
+    NamespaceEscape = 21,
+    UntrustedBinary = 22,
+    SignatureVerificationFailed = 23,
+    LateralMovementAttempt = 24,
+    VolumetricDDoS = 25,
+    C2Beaconing = 26,
 }
 
 #[repr(u32)]

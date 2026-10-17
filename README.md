@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./kwall.jpeg" alt="KWALL Logo" width="640" style="max-width: 100%; height: auto;" />
+</p>
+
 # KWALL
 
 > **eBPF-powered Kubernetes Firewall & Multi-Layer Security Platform**

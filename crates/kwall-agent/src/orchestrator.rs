@@ -1,11 +1,11 @@
-use std::sync::Arc;
-use tokio::sync::RwLock;
+use crate::kernel::check_kernel_compatibility;
+use crate::server::AgentIpcServer;
 use kwall_common::{KwallConfig, Result};
 use kwall_dataplane::{DataplaneManager, DataplaneState, EventHub};
 use kwall_security::SecurityEngine;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::info;
-use crate::kernel::check_kernel_compatibility;
-use crate::server::AgentIpcServer;
 
 pub struct NodeAgent {
     config: KwallConfig,
@@ -36,10 +36,45 @@ impl NodeAgent {
             compat.kernel_version, compat.compatible
         );
 
-        // 2. Initialize Dataplane
+        // 2. Initialize Dataplane & Check for Preserved State
         {
             let mut mgr = self.dataplane_manager.write().await;
             mgr.init()?;
+
+            if mgr.has_pinned_state() {
+                info!(
+                    "Preserved eBPF state detected at {}. Resuming dataplane enforcement without disruption.",
+                    mgr.pin_path().display()
+                );
+            } else {
+                info!("No previous BPF state found; initializing fresh bpffs layout.");
+                let _ = mgr.ensure_pin_directory();
+            }
+
+            // Attempt to load and verify eBPF bytecode if binary is present
+            let default_bpf_paths = [
+                std::env::var("KWALL_BPF_PATH").unwrap_or_default(),
+                "/usr/lib/kwall/kwall-ebpf.o".to_string(),
+                "target/bpfel-unknown-none/release/kwall-ebpf".to_string(),
+            ];
+            for path in &default_bpf_paths {
+                if !path.is_empty() && std::path::Path::new(path).exists() {
+                    match mgr.load_bpf_file(path) {
+                        Ok(report) => {
+                            info!(
+                                "Loaded eBPF binary from {}: verified {} programs, {} maps",
+                                path,
+                                report.programs.len(),
+                                report.maps.len()
+                            );
+                            break;
+                        }
+                        Err(e) => {
+                            tracing::warn!("Failed to load eBPF binary from {}: {}", path, e);
+                        }
+                    }
+                }
+            }
         }
 
         // 3. Start IPC Server

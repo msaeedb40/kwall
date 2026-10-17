@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use kwall_ebpf_common::{SecurityEvent, SecurityEventType, Severity};
+use std::collections::HashMap;
 use tracing::warn;
 
 pub struct DdosMitigator {
@@ -32,10 +32,14 @@ impl DdosMitigator {
             );
             self.blacklisted_ips.push(src_ip);
 
-            let mut event = SecurityEvent::default();
-            event.event_type = SecurityEventType::SynFlood as u32;
-            event.severity = Severity::High as u32;
-            event.extra_data[0] = src_ip as u64;
+            let mut extra_data = [0u64; 8];
+            extra_data[0] = src_ip as u64;
+            let event = SecurityEvent {
+                event_type: SecurityEventType::SynFlood as u32,
+                severity: Severity::High as u32,
+                extra_data,
+                ..Default::default()
+            };
             return Some(event);
         }
         None
@@ -52,10 +56,14 @@ impl DdosMitigator {
             );
             self.blacklisted_ips.push(src_ip);
 
-            let mut event = SecurityEvent::default();
-            event.event_type = SecurityEventType::UdpFlood as u32;
-            event.severity = Severity::High as u32;
-            event.extra_data[0] = src_ip as u64;
+            let mut extra_data = [0u64; 8];
+            extra_data[0] = src_ip as u64;
+            let event = SecurityEvent {
+                event_type: SecurityEventType::UdpFlood as u32,
+                severity: Severity::High as u32,
+                extra_data,
+                ..Default::default()
+            };
             return Some(event);
         }
         None

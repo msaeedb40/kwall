@@ -1,4 +1,4 @@
-use kwall_common::{Result, NETKIT_PRIMARY_PREFIX};
+use kwall_common::{NETKIT_PRIMARY_PREFIX, Result};
 use tracing::info;
 
 pub struct NetkitDevicePair {

@@ -1,5 +1,5 @@
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 pub struct ConntrackKey {
     pub src_ip: [u8; 16],
@@ -11,22 +11,8 @@ pub struct ConntrackKey {
     pub _pad: [u8; 2],
 }
 
-impl Default for ConntrackKey {
-    fn default() -> Self {
-        Self {
-            src_ip: [0; 16],
-            dst_ip: [0; 16],
-            src_port: 0,
-            dst_port: 0,
-            protocol: 0,
-            is_ipv6: 0,
-            _pad: [0; 2],
-        }
-    }
-}
-
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 pub struct ConntrackValue {
     pub state: u8,
@@ -39,23 +25,8 @@ pub struct ConntrackValue {
     pub _pad2: u32,
 }
 
-impl Default for ConntrackValue {
-    fn default() -> Self {
-        Self {
-            state: 0,
-            verdict: 0,
-            _pad: [0; 2],
-            last_seen_ns: 0,
-            packets: 0,
-            bytes: 0,
-            policy_id: 0,
-            _pad2: 0,
-        }
-    }
-}
-
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 pub struct MetricsCounter {
     pub packets: u64,
@@ -64,15 +35,40 @@ pub struct MetricsCounter {
     pub errors: u64,
 }
 
-impl Default for MetricsCounter {
-    fn default() -> Self {
-        Self {
-            packets: 0,
-            bytes: 0,
-            drops: 0,
-            errors: 0,
-        }
-    }
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
+pub struct LpmIpv4Key {
+    pub prefixlen: u32,
+    pub addr: [u8; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
+pub struct LpmIpv6Key {
+    pub prefixlen: u32,
+    pub addr: [u8; 16],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
+pub struct RateLimitKey {
+    pub ip: [u8; 16],
+    pub is_ipv6: u8,
+    pub _pad: [u8; 3],
+    pub _pad2: u32,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
+pub struct RateLimitValue {
+    pub last_time_ns: u64,
+    pub tokens: u64,
+    pub max_tokens: u64,
+    pub refill_rate_per_sec: u64,
 }
 
 // BPF Map Names

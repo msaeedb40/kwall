@@ -1,6 +1,6 @@
+use kwall_common::{KwallError, MIN_SUPPORTED_KERNEL_MAJOR, MIN_SUPPORTED_KERNEL_MINOR, Result};
 use std::fs;
 use std::path::Path;
-use kwall_common::{KwallError, Result, MIN_SUPPORTED_KERNEL_MAJOR, MIN_SUPPORTED_KERNEL_MINOR};
 use tracing::info;
 
 pub struct KernelCompatibility {
@@ -19,11 +19,14 @@ pub fn check_kernel_compatibility() -> Result<KernelCompatibility> {
     let mut major = 6;
     let mut minor = 8;
     let parts: Vec<&str> = release.split('.').collect();
-    if parts.len() >= 2 {
-        if let (Ok(maj), Ok(min)) = (parts[0].parse::<u32>(), parts[1].split('-').next().unwrap_or("0").parse::<u32>()) {
-            major = maj;
-            minor = min;
-        }
+    if parts.len() >= 2
+        && let (Ok(maj), Ok(min)) = (
+            parts[0].parse::<u32>(),
+            parts[1].split('-').next().unwrap_or("0").parse::<u32>(),
+        )
+    {
+        major = maj;
+        minor = min;
     }
 
     let btf_available = Path::new("/sys/kernel/btf/vmlinux").exists();

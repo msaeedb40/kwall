@@ -1,0 +1,11 @@
+<div class="min-h-screen bg-[#080c14] text-slate-100 flex flex-col font-sans">
+  <app-header />
+
+  <div class="flex-1 flex overflow-hidden">
+    <app-sidebar class="hidden md:block flex-shrink-0" />
+
+    <main class="flex-1 overflow-y-auto h-[calc(100vh-4rem)] p-6 lg:p-8">
+      <router-outlet />
+    </main>
+  </div>
+</div>

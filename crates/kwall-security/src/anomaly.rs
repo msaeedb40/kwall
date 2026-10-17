@@ -1,5 +1,5 @@
-use std::collections::{HashMap, HashSet};
 use kwall_ebpf_common::{SecurityEvent, SecurityEventType, Severity};
+use std::collections::{HashMap, HashSet};
 use tracing::warn;
 
 pub struct PortScanDetector {
@@ -26,11 +26,15 @@ impl PortScanDetector {
                 ports.len()
             );
 
-            let mut event = SecurityEvent::default();
-            event.identity_id = src_identity;
-            event.event_type = SecurityEventType::PortScan as u32;
-            event.severity = Severity::Medium as u32;
-            event.extra_data[0] = ports.len() as u64;
+            let mut extra_data = [0u64; 8];
+            extra_data[0] = ports.len() as u64;
+            let event = SecurityEvent {
+                identity_id: src_identity,
+                event_type: SecurityEventType::PortScan as u32,
+                severity: Severity::Medium as u32,
+                extra_data,
+                ..Default::default()
+            };
 
             ports.clear();
             return Some(event);

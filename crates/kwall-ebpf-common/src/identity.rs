@@ -1,5 +1,5 @@
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 pub struct EndpointIdentity {
     pub identity_id: u32,
@@ -9,20 +9,7 @@ pub struct EndpointIdentity {
     pub ipv4: u32,
     pub ipv6: [u8; 16],
     pub flags: u32,
-}
-
-impl Default for EndpointIdentity {
-    fn default() -> Self {
-        Self {
-            identity_id: 0,
-            namespace_id: 0,
-            pod_uid_hash: 0,
-            ifindex: 0,
-            ipv4: 0,
-            ipv6: [0; 16],
-            flags: 0,
-        }
-    }
+    pub _pad: u32,
 }
 
 pub const IDENTITY_HOST: u32 = 1;

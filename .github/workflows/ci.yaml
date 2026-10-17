@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, mybuild]
   pull_request:
-    branches: [main]
+    branches: [main, mybuild]
 
 env:
   CARGO_TERM_COLOR: always
@@ -29,10 +29,65 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Cargo check
-        run: cargo check --workspace --all-targets
+        run: cargo check --workspace --exclude kwall-ebpf --all-targets
 
       - name: Clippy lint
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --exclude kwall-ebpf --all-targets -- -D warnings
 
       - name: Run workspace tests
-        run: cargo test --workspace --all-features
+        run: cargo test --workspace --exclude kwall-ebpf --all-features
+
+  ui:
+    name: Build & Verify UI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: kwall-ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: kwall-ui
+        run: npm ci
+
+      - name: Build UI
+        working-directory: kwall-ui
+        run: npm run build
+
+  ebpf:
+    name: Build & Conformance Check eBPF
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+
+      - name: Cache cargo bpf-linker
+        uses: actions/cache@v4
+        id: cache-bpf-linker
+        with:
+          path: ~/.cargo/bin/bpf-linker
+          key: ${{ runner.os }}-bpf-linker-0.9.13
+
+      - name: Install bpf-linker
+        if: steps.cache-bpf-linker.outputs.cache-hit != 'true'
+        run: cargo install bpf-linker --no-default-features
+
+      - name: Build eBPF programs (release)
+        run: cargo +nightly build -Z build-std=core -p kwall-ebpf --release --target bpfel-unknown-none
+
+      - name: Verify eBPF ELF binary
+        run: |
+          file target/bpfel-unknown-none/release/kwall-ebpf
+          readelf -S target/bpfel-unknown-none/release/kwall-ebpf
+          readelf -s target/bpfel-unknown-none/release/kwall-ebpf | grep -E "kwall_xdp_ingress|kwall_tc_ingress|kwall_tc_egress"
+

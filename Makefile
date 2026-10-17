@@ -88,6 +88,10 @@ ebpf-debug:
 .PHONY: build-all
 build-all: release ebpf
 
+.PHONY: ebpf-verify
+ebpf-verify: ebpf
+	$(CARGO) test -p kwall-dataplane --lib verifier::tests::test_verify_real_kwall_ebpf_binary
+
 # ------------------------------------------------------------
 # Security / verification
 # ------------------------------------------------------------

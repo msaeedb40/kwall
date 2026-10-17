@@ -38,6 +38,13 @@ impl Ipv4Hdr {
     }
 }
 
+pub const TCP_FLAG_FIN: u8 = 0x01;
+pub const TCP_FLAG_SYN: u8 = 0x02;
+pub const TCP_FLAG_RST: u8 = 0x04;
+pub const TCP_FLAG_PSH: u8 = 0x08;
+pub const TCP_FLAG_ACK: u8 = 0x10;
+pub const TCP_FLAG_URG: u8 = 0x20;
+
 #[repr(C, packed)]
 #[derive(Clone, Copy)]
 pub struct TcpHdr {
@@ -50,6 +57,28 @@ pub struct TcpHdr {
     pub window: u16,
     pub check: u16,
     pub urg_ptr: u16,
+}
+
+impl TcpHdr {
+    #[inline(always)]
+    pub fn is_syn(&self) -> bool {
+        (self.flags & TCP_FLAG_SYN) != 0
+    }
+
+    #[inline(always)]
+    pub fn is_ack(&self) -> bool {
+        (self.flags & TCP_FLAG_ACK) != 0
+    }
+
+    #[inline(always)]
+    pub fn is_fin_or_rst(&self) -> bool {
+        (self.flags & (TCP_FLAG_FIN | TCP_FLAG_RST)) != 0
+    }
+
+    #[inline(always)]
+    pub fn doff_bytes(&self) -> usize {
+        ((self.res1_doff >> 4) as usize) * 4
+    }
 }
 
 #[repr(C, packed)]

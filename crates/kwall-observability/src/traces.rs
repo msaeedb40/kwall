@@ -56,7 +56,11 @@ impl BpfSpanRecord {
                 ("net.host.port".to_string(), dst_port.to_string()),
                 ("telemetry.sdk.name".to_string(), "kwall-ebpf".to_string()),
             ],
-            status: if action == "DROP" { "ERROR".to_string() } else { "OK".to_string() },
+            status: if action == "DROP" {
+                "ERROR".to_string()
+            } else {
+                "OK".to_string()
+            },
         }
     }
 
@@ -68,13 +72,19 @@ impl BpfSpanRecord {
 // Lightweight deterministic pseudo-random generator for traces (no extra dependency needed)
 fn rand_u64() -> u64 {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
     (now as u64) ^ 0x517cc1b727220a95
 }
 
 fn rand_u128() -> u128 {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
     now ^ 0xa0761d6478bd642f517cc1b727220a95
 }
 

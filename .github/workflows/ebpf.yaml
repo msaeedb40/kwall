@@ -3,13 +3,14 @@ name: KWALL eBPF Build & Verification
 on:
   push:
     branches: [main, mybuild]
+  pull_request:
+    branches: [main, mybuild]
     paths:
       - 'crates/kwall-ebpf/**'
       - 'crates/kwall-ebpf-common/**'
       - '.cargo/**'
       - '.github/workflows/ebpf.yaml'
-  pull_request:
-    branches: [main]
+  
 
 jobs:
   ebpf:
@@ -35,8 +36,12 @@ jobs:
             --release \
             --target bpfel-unknown-none
 
+      - name: Run eBPF Conformance & Verifier Checks
+        run: cargo test -p kwall-dataplane --lib verifier::tests::test_verify_real_kwall_ebpf_binary
+
       - name: Upload eBPF Bytecode Artifact
         uses: actions/upload-artifact@v4
         with:
           name: kwall-ebpf-bytecode
           path: target/bpfel-unknown-none/release/kwall-ebpf
+

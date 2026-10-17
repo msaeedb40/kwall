@@ -1,22 +1,31 @@
 pub mod anomaly;
 pub mod ddos;
+pub mod dns;
 pub mod supply_chain;
 
 pub use anomaly::PortScanDetector;
 pub use ddos::DdosMitigator;
+pub use dns::DnsThreatDetector;
 pub use supply_chain::WorkloadIntegrityGuard;
 
 pub struct SecurityEngine {
     pub ddos: DdosMitigator,
     pub port_scan: PortScanDetector,
+    pub dns: DnsThreatDetector,
     pub integrity: WorkloadIntegrityGuard,
 }
 
 impl SecurityEngine {
-    pub fn new(max_syn: u32, max_udp: u32, port_threshold: usize, allowed_binaries: Vec<String>) -> Self {
+    pub fn new(
+        max_syn: u32,
+        max_udp: u32,
+        port_threshold: usize,
+        allowed_binaries: Vec<String>,
+    ) -> Self {
         Self {
             ddos: DdosMitigator::new(max_syn, max_udp),
             port_scan: PortScanDetector::new(port_threshold),
+            dns: DnsThreatDetector::new(45, 100),
             integrity: WorkloadIntegrityGuard::new(allowed_binaries),
         }
     }
@@ -50,7 +59,9 @@ mod tests {
         assert!(scanner.record_connection(identity, 80).is_none());
         assert!(scanner.record_connection(identity, 443).is_none());
 
-        let alert = scanner.record_connection(identity, 8080).expect("Expected port scan alert");
+        let alert = scanner
+            .record_connection(identity, 8080)
+            .expect("Expected port scan alert");
         assert_eq!(alert.event_type, SecurityEventType::PortScan as u32);
         assert_eq!(alert.identity_id, identity);
     }
@@ -58,12 +69,62 @@ mod tests {
     #[test]
     fn test_workload_binary_verification() {
         let guard = WorkloadIntegrityGuard::new(vec!["allowed-app".into()]);
-        assert!(guard.verify_executable("/usr/bin/allowed-app", 100).is_none());
+        assert!(
+            guard
+                .verify_executable("/usr/bin/allowed-app", 100)
+                .is_none()
+        );
 
-        let alert = guard
+        let alert_tmp = guard
             .verify_executable("/tmp/xmrig-miner", 101)
+            .expect("Expected malicious process alert for /tmp execution");
+        assert_eq!(
+            alert_tmp.event_type,
+            SecurityEventType::MaliciousProcessExec as u32
+        );
+        assert_eq!(alert_tmp.pid, 101);
+
+        let alert_untrusted = guard
+            .verify_executable("/usr/local/bin/malicious-tool", 102)
             .expect("Expected untrusted binary alert");
-        assert_eq!(alert.event_type, SecurityEventType::MaliciousProcessExec as u32);
-        assert_eq!(alert.pid, 101);
+        assert_eq!(
+            alert_untrusted.event_type,
+            SecurityEventType::UntrustedBinary as u32
+        );
+        assert_eq!(alert_untrusted.pid, 102);
+    }
+
+    #[test]
+    fn test_dns_threat_detection() {
+        let mut detector = DnsThreatDetector::new(30, 50);
+
+        // Normal domain query
+        assert!(
+            detector
+                .inspect_query(1001, "kubernetes.default.svc.cluster.local")
+                .is_none()
+        );
+
+        // DNS Tunneling (subdomain label > 30 characters)
+        let tunneling_domain =
+            "aGVsbG8td29ybGQtdGhpcy1pcy1leGZpbHRyYXRpb24tcGF5bG9hZC1kYXRh.evil.com";
+        let alert_tunnel = detector
+            .inspect_query(1001, tunneling_domain)
+            .expect("Expected DNS tunneling alert");
+        assert_eq!(
+            alert_tunnel.event_type,
+            SecurityEventType::DnsTunneling as u32
+        );
+        assert_eq!(alert_tunnel.identity_id, 1001);
+
+        // Cryptomining pool detection
+        let alert_mining = detector
+            .inspect_query(1002, "xmrpool.eu")
+            .expect("Expected cryptomining pool alert");
+        assert_eq!(
+            alert_mining.event_type,
+            SecurityEventType::Cryptomining as u32
+        );
+        assert_eq!(alert_mining.identity_id, 1002);
     }
 }

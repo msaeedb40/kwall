@@ -4,6 +4,7 @@ use aya_ebpf::{
 };
 use kwall_ebpf_common::{
     ConntrackKey, ConntrackValue, EndpointIdentity, MetricsCounter, PolicyKey, PolicyValue,
+    RateLimitKey, RateLimitValue,
 };
 
 #[map]
@@ -20,6 +21,10 @@ pub static KW_CONNTRACK: LruHashMap<ConntrackKey, ConntrackValue> =
 
 #[map]
 pub static KW_IP_BLACKLIST: HashMap<u32, u8> = HashMap::<u32, u8>::with_max_entries(65536, 0);
+
+#[map]
+pub static KW_RATE_LIMITS: LruHashMap<RateLimitKey, RateLimitValue> =
+    LruHashMap::<RateLimitKey, RateLimitValue>::with_max_entries(65536, 0);
 
 #[map]
 pub static KW_METRICS: PerCpuArray<MetricsCounter> =

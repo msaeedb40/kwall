@@ -1,5 +1,5 @@
-use std::sync::atomic::{AtomicU64, Ordering};
 use kwall_ebpf_common::MetricsCounter;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Default)]
 pub struct PrometheusMetrics {

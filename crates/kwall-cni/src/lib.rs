@@ -1,6 +1,6 @@
 pub mod netkit;
 
-pub use netkit::{create_netkit_pair, NetkitDevicePair};
+pub use netkit::{NetkitDevicePair, create_netkit_pair};
 
 use anyhow::Result;
 use kwall_common::{AgentRequest, AgentResponse, DEFAULT_SOCKET_PATH};

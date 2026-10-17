@@ -1,5 +1,11 @@
 #![no_std]
 #![no_main]
+#![allow(
+    clippy::needless_borrows_for_generic_args,
+    clippy::field_reassign_with_default,
+    clippy::missing_safety_doc,
+    clippy::result_unit_err
+)]
 
 pub mod maps;
 pub mod packet;
@@ -12,17 +18,16 @@ use aya_ebpf::{
 };
 use core::mem;
 use kwall_ebpf_common::{
-    ConntrackKey, ConntrackState, ConntrackValue, DropReason, FlowEvent, L4Protocol,
-    PacketAction, PolicyKey, SecurityEvent, SecurityEventType, Severity, TrafficDirection,
-    IDENTITY_HOST, IDENTITY_WORLD,
+    ConntrackKey, ConntrackState, ConntrackValue, DropReason, FlowEvent, IDENTITY_HOST,
+    IDENTITY_WORLD, L4Protocol, PacketAction, PolicyKey, RateLimitKey, SecurityEvent,
+    SecurityEventType, Severity, TrafficDirection,
 };
 use maps::{
     KW_CONNTRACK, KW_ENDPOINTS, KW_FLOW_EVENTS, KW_IP_BLACKLIST, KW_METRICS, KW_POLICIES,
-    KW_SEC_EVENTS,
+    KW_RATE_LIMITS, KW_SEC_EVENTS,
 };
 use packet::{
-    ptr_at, EthHdr, Ipv4Hdr, TcpHdr, UdpHdr, ETH_P_IP, IPPROTO_ICMP, IPPROTO_TCP,
-    IPPROTO_UDP,
+    ETH_P_IP, EthHdr, IPPROTO_ICMP, IPPROTO_TCP, IPPROTO_UDP, Ipv4Hdr, TcpHdr, UdpHdr, ptr_at,
 };
 
 pub const TC_ACT_UNSPEC: i32 = -1;
@@ -53,11 +58,15 @@ fn try_xdp_ingress(ctx: XdpContext) -> Result<u32, ()> {
 
     let ip_offset = mem::size_of::<EthHdr>();
     let ip = unsafe { ptr_at::<Ipv4Hdr>(data, data_end, ip_offset)? };
+    let ihl_bytes = unsafe { (*ip).ihl_bytes() };
+    if ihl_bytes < 20 {
+        return Ok(xdp_action::XDP_DROP);
+    }
+
     let src_ip = u32::from_be(unsafe { (*ip).src_addr });
 
     // Early drop check: IP blacklist lookup
     if unsafe { KW_IP_BLACKLIST.get(&src_ip).is_some() } {
-        // Record metric
         if let Some(metrics) = KW_METRICS.get_ptr_mut(0) {
             unsafe {
                 (*metrics).drops += 1;
@@ -65,7 +74,6 @@ fn try_xdp_ingress(ctx: XdpContext) -> Result<u32, ()> {
             }
         }
 
-        // Emit security event to ring buffer
         if let Some(mut slot) = KW_SEC_EVENTS.reserve::<SecurityEvent>(0) {
             let mut sec_event = SecurityEvent::default();
             sec_event.timestamp_ns = unsafe { bpf_ktime_get_ns() };
@@ -77,6 +85,53 @@ fn try_xdp_ingress(ctx: XdpContext) -> Result<u32, ()> {
         }
 
         return Ok(xdp_action::XDP_DROP);
+    }
+
+    // Token-bucket rate limiting per source IP
+    let mut rl_key = RateLimitKey::default();
+    rl_key.ip[0..4].copy_from_slice(&src_ip.to_ne_bytes());
+    rl_key.is_ipv6 = 0;
+
+    if let Some(rl_val) = KW_RATE_LIMITS.get_ptr_mut(&rl_key) {
+        let now_ns = unsafe { bpf_ktime_get_ns() };
+        unsafe {
+            let elapsed = now_ns.saturating_sub((*rl_val).last_time_ns);
+            let rate = (*rl_val).refill_rate_per_sec;
+            let refill = if rate == 0 {
+                0
+            } else {
+                let secs = elapsed / 1_000_000_000;
+                let rem_ns = elapsed % 1_000_000_000;
+                let refill_sec = if secs > 1000 {
+                    (*rl_val).max_tokens
+                } else {
+                    secs * rate
+                };
+                let refill_rem = (rem_ns * rate) / 1_000_000_000;
+                refill_sec.saturating_add(refill_rem)
+            };
+            let max_tokens = (*rl_val).max_tokens;
+            let new_tokens = core::cmp::min(max_tokens, (*rl_val).tokens.saturating_add(refill));
+
+            if new_tokens == 0 {
+                if let Some(metrics) = KW_METRICS.get_ptr_mut(0) {
+                    (*metrics).drops += 1;
+                }
+                if let Some(mut slot) = KW_SEC_EVENTS.reserve::<SecurityEvent>(0) {
+                    let mut sec_event = SecurityEvent::default();
+                    sec_event.timestamp_ns = now_ns;
+                    sec_event.event_type = SecurityEventType::VolumetricDDoS as u32;
+                    sec_event.severity = Severity::High as u32;
+                    sec_event.extra_data[0] = src_ip as u64;
+                    slot.write(sec_event);
+                    slot.submit(0);
+                }
+                return Ok(xdp_action::XDP_DROP);
+            }
+
+            (*rl_val).tokens = new_tokens - 1;
+            (*rl_val).last_time_ns = now_ns;
+        }
     }
 
     // Packet metrics accounting
@@ -149,12 +204,14 @@ fn process_packet(ctx: TcContext, direction: TrafficDirection) -> Result<i32, ()
     let mut src_port: u16 = 0;
     let mut dst_port: u16 = 0;
     let l4_protocol: L4Protocol;
+    let mut is_fin_or_rst = false;
 
     if ip_proto == IPPROTO_TCP {
         l4_protocol = L4Protocol::Tcp;
         let tcp = unsafe { ptr_at::<TcpHdr>(data, data_end, l4_offset)? };
         src_port = u16::from_be(unsafe { (*tcp).source });
         dst_port = u16::from_be(unsafe { (*tcp).dest });
+        is_fin_or_rst = unsafe { (*tcp).is_fin_or_rst() };
     } else if ip_proto == IPPROTO_UDP {
         l4_protocol = L4Protocol::Udp;
         let udp = unsafe { ptr_at::<UdpHdr>(data, data_end, l4_offset)? };
@@ -166,7 +223,62 @@ fn process_packet(ctx: TcContext, direction: TrafficDirection) -> Result<i32, ()
         l4_protocol = L4Protocol::Unknown;
     }
 
-    // Resolve Workload Identities
+    let now_ns = unsafe { bpf_ktime_get_ns() };
+    let pkt_len = (data_end - data) as u64;
+
+    // Conntrack Forward Key
+    let mut ct_key_fwd = ConntrackKey::default();
+    ct_key_fwd.src_ip[0..4].copy_from_slice(&src_ip_raw.to_ne_bytes());
+    ct_key_fwd.dst_ip[0..4].copy_from_slice(&dst_ip_raw.to_ne_bytes());
+    ct_key_fwd.src_port = src_port;
+    ct_key_fwd.dst_port = dst_port;
+    ct_key_fwd.protocol = l4_protocol as u8;
+    ct_key_fwd.is_ipv6 = 0;
+
+    // Conntrack Reverse Key (for return reply traffic matching)
+    let mut ct_key_rev = ConntrackKey::default();
+    ct_key_rev.src_ip[0..4].copy_from_slice(&dst_ip_raw.to_ne_bytes());
+    ct_key_rev.dst_ip[0..4].copy_from_slice(&src_ip_raw.to_ne_bytes());
+    ct_key_rev.src_port = dst_port;
+    ct_key_rev.dst_port = src_port;
+    ct_key_rev.protocol = l4_protocol as u8;
+    ct_key_rev.is_ipv6 = 0;
+
+    // Check existing forward flow
+    if let Some(ct_val) = KW_CONNTRACK.get_ptr_mut(&ct_key_fwd) {
+        unsafe {
+            (*ct_val).last_seen_ns = now_ns;
+            (*ct_val).packets += 1;
+            (*ct_val).bytes += pkt_len;
+            if is_fin_or_rst {
+                (*ct_val).state = ConntrackState::Closed as u8;
+            }
+        }
+        let verdict = unsafe { (*ct_val).verdict };
+        if verdict == (PacketAction::Drop as u8) {
+            return Ok(TC_ACT_SHOT);
+        }
+        return Ok(TC_ACT_OK);
+    }
+
+    // Check existing reverse flow (bidirectional established connection reply)
+    if let Some(ct_val) = KW_CONNTRACK.get_ptr_mut(&ct_key_rev) {
+        unsafe {
+            (*ct_val).last_seen_ns = now_ns;
+            (*ct_val).packets += 1;
+            (*ct_val).bytes += pkt_len;
+            if is_fin_or_rst {
+                (*ct_val).state = ConntrackState::Closed as u8;
+            }
+        }
+        let verdict = unsafe { (*ct_val).verdict };
+        if verdict == (PacketAction::Drop as u8) {
+            return Ok(TC_ACT_SHOT);
+        }
+        return Ok(TC_ACT_OK);
+    }
+
+    // Resolve Workload Identities for New Connection
     let src_identity = unsafe {
         KW_ENDPOINTS
             .get(&src_ip)
@@ -181,33 +293,6 @@ fn process_packet(ctx: TcContext, direction: TrafficDirection) -> Result<i32, ()
             .unwrap_or(IDENTITY_WORLD)
     };
 
-    // Conntrack key construction
-    let mut ct_key = ConntrackKey::default();
-    ct_key.src_ip[0..4].copy_from_slice(&src_ip_raw.to_ne_bytes());
-    ct_key.dst_ip[0..4].copy_from_slice(&dst_ip_raw.to_ne_bytes());
-    ct_key.src_port = src_port;
-    ct_key.dst_port = dst_port;
-    ct_key.protocol = l4_protocol as u8;
-    ct_key.is_ipv6 = 0;
-
-    let now_ns = unsafe { bpf_ktime_get_ns() };
-    let pkt_len = (data_end - data) as u64;
-
-    // Check existing connection tracking state
-    if let Some(ct_val) = KW_CONNTRACK.get_ptr_mut(&ct_key) {
-        unsafe {
-            (*ct_val).last_seen_ns = now_ns;
-            (*ct_val).packets += 1;
-            (*ct_val).bytes += pkt_len;
-        }
-
-        let verdict = unsafe { (*ct_val).verdict };
-        if verdict == (PacketAction::Drop as u8) {
-            return Ok(TC_ACT_SHOT);
-        }
-        return Ok(TC_ACT_OK);
-    }
-
     // Evaluate policy for new connection
     let pol_key = PolicyKey {
         src_identity,
@@ -217,7 +302,6 @@ fn process_packet(ctx: TcContext, direction: TrafficDirection) -> Result<i32, ()
         direction: direction as u8,
     };
 
-    // Check exact rule, then wildcard port (port = 0)
     let pol_rule = unsafe {
         KW_POLICIES.get(&pol_key).or_else(|| {
             let mut wildcard_key = pol_key;
@@ -241,22 +325,46 @@ fn process_packet(ctx: TcContext, direction: TrafficDirection) -> Result<i32, ()
         }
     };
 
-    // Store in conntrack table
-    let ct_val = ConntrackValue {
-        state: if verdict_action == PacketAction::Pass {
-            ConntrackState::Established as u8
-        } else {
-            ConntrackState::Invalid as u8
-        },
-        verdict: verdict_action as u8,
-        _pad: [0; 2],
-        last_seen_ns: now_ns,
-        packets: 1,
-        bytes: pkt_len,
-        policy_id,
-        _pad2: 0,
-    };
-    let _ = KW_CONNTRACK.insert(&ct_key, &ct_val, 0);
+    // Store state in conntrack table
+    if verdict_action == PacketAction::Pass {
+        let ct_fwd = ConntrackValue {
+            state: ConntrackState::Established as u8,
+            verdict: PacketAction::Pass as u8,
+            _pad: [0; 2],
+            last_seen_ns: now_ns,
+            packets: 1,
+            bytes: pkt_len,
+            policy_id,
+            _pad2: 0,
+        };
+        let _ = KW_CONNTRACK.insert(&ct_key_fwd, &ct_fwd, 0);
+
+        // Pre-seed reverse connection so reply packets pass seamlessly
+        let ct_rev = ConntrackValue {
+            state: ConntrackState::Established as u8,
+            verdict: PacketAction::Pass as u8,
+            _pad: [0; 2],
+            last_seen_ns: now_ns,
+            packets: 0,
+            bytes: 0,
+            policy_id,
+            _pad2: 0,
+        };
+        let _ = KW_CONNTRACK.insert(&ct_key_rev, &ct_rev, 0);
+    } else {
+        // Cache drop verdict to fast-drop retries
+        let ct_drop = ConntrackValue {
+            state: ConntrackState::Invalid as u8,
+            verdict: PacketAction::Drop as u8,
+            _pad: [0; 2],
+            last_seen_ns: now_ns,
+            packets: 1,
+            bytes: pkt_len,
+            policy_id,
+            _pad2: 0,
+        };
+        let _ = KW_CONNTRACK.insert(&ct_key_fwd, &ct_drop, 0);
+    }
 
     // Emit Flow Record to Ring Buffer
     if let Some(mut slot) = KW_FLOW_EVENTS.reserve::<FlowEvent>(0) {
@@ -286,7 +394,7 @@ fn process_packet(ctx: TcContext, direction: TrafficDirection) -> Result<i32, ()
     }
 }
 
-#[cfg(not(test))]
+#[cfg(target_arch = "bpf")]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}

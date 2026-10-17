@@ -1,10 +1,12 @@
 pub mod events;
 pub mod manager;
 pub mod maps;
+pub mod verifier;
 
 pub use events::EventHub;
 pub use manager::DataplaneManager;
 pub use maps::DataplaneState;
+pub use verifier::{BpfConformanceVerifier, BpfVerifierReport};
 
 #[cfg(test)]
 mod tests {
@@ -42,6 +44,7 @@ mod tests {
             ipv4: 0x0A000005, // 10.0.0.5
             ipv6: [0; 16],
             flags: 0,
+            _pad: 0,
         };
         state.insert_endpoint(0x0A000005, ep);
         assert_eq!(state.endpoint_count(), 1);
@@ -71,6 +74,21 @@ mod tests {
         assert!(state.is_blacklisted(0xC0A80101));
         assert!(state.remove_blacklist_ip(0xC0A80101));
         assert!(!state.is_blacklisted(0xC0A80101));
+
+        // Rate limit map test
+        let mut rl_key = kwall_ebpf_common::RateLimitKey::default();
+        rl_key.ip[0..4].copy_from_slice(&[10, 0, 0, 99]);
+        let rl_val = kwall_ebpf_common::RateLimitValue {
+            last_time_ns: 1000,
+            tokens: 50,
+            max_tokens: 100,
+            refill_rate_per_sec: 10,
+        };
+        state.insert_rate_limit(rl_key, rl_val);
+        assert_eq!(state.rate_limit_count(), 1);
+        assert_eq!(state.get_rate_limit(&rl_key).unwrap().tokens, 50);
+        assert!(state.remove_rate_limit(&rl_key).is_some());
+        assert_eq!(state.rate_limit_count(), 0);
     }
 
     #[tokio::test]
@@ -99,8 +117,71 @@ mod tests {
         };
 
         hub.dispatch_security_event(sec_event);
-        let received = sec_rx.recv().await.expect("Failed to receive security event");
+        let received = sec_rx
+            .recv()
+            .await
+            .expect("Failed to receive security event");
         assert_eq!(received.event_type, SecurityEventType::PortScan as u32);
         assert_eq!(received.identity_id, 1042);
+    }
+
+    #[test]
+    fn test_dataplane_manager_bpf_loading_and_pinning() {
+        let temp_dir = std::env::temp_dir().join(format!("kwall_test_bpf_{}", std::process::id()));
+        let mut dm = DataplaneManager::with_pin_path(&temp_dir);
+        dm.init().expect("Initialization failed");
+
+        assert_eq!(dm.pin_path(), temp_dir.as_path());
+        assert!(!dm.has_pinned_state());
+
+        // Ensure pin directory is created
+        dm.ensure_pin_directory().expect("Failed to create pin dir");
+        assert!(temp_dir.exists());
+
+        // Check if compiled binary exists to test loading
+        let bpf_path = format!(
+            "{}/../../target/bpfel-unknown-none/release/kwall-ebpf",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        if std::path::Path::new(&bpf_path).exists() {
+            let report = dm
+                .load_bpf_file(&bpf_path)
+                .expect("Failed to load and verify BPF binary");
+            assert!(report.is_valid);
+            assert!(dm.is_bpf_loaded());
+            assert_eq!(report.programs.len(), 3);
+            assert_eq!(report.maps.len(), 8);
+        }
+
+        // Cleanup
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_dataplane_restart_state_preservation() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("kwall_restart_test_{}", std::process::id()));
+        let mut dm1 = DataplaneManager::with_pin_path(&temp_dir);
+        dm1.init().expect("Init dm1 failed");
+        dm1.ensure_pin_directory()
+            .expect("Failed to create pin dir");
+
+        // Simulate a pinned map created by an earlier agent process
+        let pinned_map_file = temp_dir.join("KW_CONNTRACK");
+        std::fs::write(&pinned_map_file, b"test_bpf_map_state")
+            .expect("Failed to create simulated pinned map");
+
+        // Simulate agent restart: new manager instance starts up
+        let dm2 = DataplaneManager::with_pin_path(&temp_dir);
+        assert!(
+            dm2.has_pinned_state(),
+            "Agent should detect preserved BPF state across restarts"
+        );
+
+        // Clean up
+        dm1.clean_pinned_maps()
+            .expect("Failed to clean pinned maps");
+        assert!(!dm2.has_pinned_state());
+        let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }

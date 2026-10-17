@@ -1,12 +1,14 @@
 pub mod ddos;
 pub mod flow;
 pub mod policy;
+pub mod runtime;
 pub mod security;
 pub mod types;
 
 pub use ddos::*;
 pub use flow::*;
 pub use policy::*;
+pub use runtime::*;
 pub use security::*;
 pub use types::*;
 
@@ -24,6 +26,9 @@ pub fn generate_crd_yamls() -> Result<Vec<(String, String)>, serde_yaml::Error> 
     let dp = serde_yaml::to_string(&KWALLDDoSPolicy::crd())?;
     crds.push(("ddospolicies.yaml".to_string(), dp));
 
+    let rp = serde_yaml::to_string(&KWALLRuntimePolicy::crd())?;
+    crds.push(("runtimepolicies.yaml".to_string(), rp));
+
     let fp = serde_yaml::to_string(&KWALLFlowPolicy::crd())?;
     crds.push(("flowpolicies.yaml".to_string(), fp));
 
@@ -39,12 +44,17 @@ mod tests {
     #[test]
     fn test_crd_generation() {
         let yamls = generate_crd_yamls().expect("Failed to generate CRD yamls");
-        assert_eq!(yamls.len(), 4);
-        let crd_dir = Path::new("../../api/crd/kwall.io");
-        if crd_dir.exists() {
-            for (filename, content) in &yamls {
-                let target = crd_dir.join(filename);
-                fs::write(&target, content).expect("Failed to write CRD yaml");
+        assert_eq!(yamls.len(), 5);
+        let crd_dirs = [
+            Path::new("../../api/crd/kwall.io"),
+            Path::new("../../deploy/helm/kwall/crds"),
+        ];
+        for dir in crd_dirs {
+            if dir.exists() {
+                for (filename, content) in &yamls {
+                    let target = dir.join(filename);
+                    fs::write(&target, content).expect("Failed to write CRD yaml");
+                }
             }
         }
         for (name, yaml) in yamls {

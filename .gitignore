@@ -3,3 +3,6 @@
 *.swp
 *.bak
 .DS_Store
+kwall-ui/node_modules/
+kwall-ui/dist/
+kwall-ui/.angular/

@@ -1,7 +1,5 @@
 use crate::ir::{IdentitySelector, PolicyRuleIR};
-use kwall_ebpf_common::{
-    L4Protocol, PolicyKey, PolicyValue, IDENTITY_HOST, IDENTITY_WORLD,
-};
+use kwall_ebpf_common::{IDENTITY_HOST, IDENTITY_WORLD, L4Protocol, PolicyKey, PolicyValue};
 use tracing::info;
 
 pub struct PolicyCompiler;
@@ -63,7 +61,7 @@ fn expand_selector(selector: &IdentitySelector) -> Vec<u32> {
     match selector {
         IdentitySelector::Any => vec![0], // 0 indicates wildcard
         IdentitySelector::Host => vec![IDENTITY_HOST],
-        IdentitySelector::World => vec![IDENTITY_WORLD],
+        IdentitySelector::World | IdentitySelector::Cidr(_) => vec![IDENTITY_WORLD],
         IdentitySelector::Specific(id) => vec![*id],
         IdentitySelector::Group(ids) => ids.clone(),
     }

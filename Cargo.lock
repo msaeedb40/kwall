@@ -1385,7 +1385,9 @@ dependencies = [
 name = "kwall-runtime"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "kwall-common",
+ "kwall-ebpf-common",
  "libc",
  "nix",
  "serde",
