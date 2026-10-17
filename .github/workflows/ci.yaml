@@ -59,6 +59,10 @@ jobs:
         working-directory: kwall-ui
         run: npm run build
 
+      - name: Run UI tests
+        working-directory: kwall-ui
+        run: npm test -- --watch=false
+
   ebpf:
     name: Build & Conformance Check eBPF
     runs-on: ubuntu-latest
@@ -71,23 +75,22 @@ jobs:
         with:
           components: rust-src
 
-      - name: Cache cargo bpf-linker
-        uses: actions/cache@v4
-        id: cache-bpf-linker
-        with:
-          path: ~/.cargo/bin/bpf-linker
-          key: ${{ runner.os }}-bpf-linker-0.9.13
-
       - name: Install bpf-linker
-        if: steps.cache-bpf-linker.outputs.cache-hit != 'true'
-        run: cargo install bpf-linker --no-default-features
+        uses: taiki-e/install-action@bpf-linker
 
       - name: Build eBPF programs (release)
-        run: cargo +nightly build -Z build-std=core -p kwall-ebpf --release --target bpfel-unknown-none
+        run: |
+          cargo +nightly build \
+            -Z build-std=core \
+            -p kwall-ebpf \
+            --release \
+            --target bpfel-unknown-none
 
-      - name: Verify eBPF ELF binary
+      - name: Run eBPF Conformance & Verifier Checks
+        run: cargo test -p kwall-dataplane --lib verifier::tests::test_verify_real_kwall_ebpf_binary
+
+      - name: Inspect eBPF ELF binary
         run: |
           file target/bpfel-unknown-none/release/kwall-ebpf
           readelf -S target/bpfel-unknown-none/release/kwall-ebpf
-          readelf -s target/bpfel-unknown-none/release/kwall-ebpf | grep -E "kwall_xdp_ingress|kwall_tc_ingress|kwall_tc_egress"
 
