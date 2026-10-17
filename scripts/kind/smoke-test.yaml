@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kwall-demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-backend
+  namespace: kwall-demo
+  labels:
+    app: demo-backend
+    role: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo-backend
+  template:
+    metadata:
+      labels:
+        app: demo-backend
+        role: backend
+    spec:
+      containers:
+        - name: echo
+          image: hashicorp/http-echo:0.2.3
+          args: ["-text=hello-from-kwall-protected-backend", "-listen=:8080"]
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-backend
+  namespace: kwall-demo
+spec:
+  selector:
+    app: demo-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-frontend
+  namespace: kwall-demo
+  labels:
+    app: demo-frontend
+    role: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-frontend
+  template:
+    metadata:
+      labels:
+        app: demo-frontend
+        role: frontend
+    spec:
+      containers:
+        - name: client
+          image: curlimages/curl:8.5.0
+          command: ["sleep", "3600"]
+---
+apiVersion: kwall.io/v1alpha1
+kind: KWALLNetworkPolicy
+metadata:
+  name: backend-security-policy
+  namespace: kwall-demo
+spec:
+  podSelector:
+    matchLabels:
+      role: backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: frontend
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: UDP
+          port: 53

@@ -128,6 +128,30 @@ docker-run:
 		$(IMAGE):$(TAG)
 
 # ------------------------------------------------------------
+# KinD Cluster Testbed
+# ------------------------------------------------------------
+
+.PHONY: kind-up
+kind-up:
+	bash scripts/kind/setup-kind.sh up
+
+.PHONY: kind-down
+kind-down:
+	bash scripts/kind/setup-kind.sh down
+
+.PHONY: kind-deploy
+kind-deploy:
+	bash scripts/kind/setup-kind.sh deploy
+
+.PHONY: kind-smoke
+kind-smoke:
+	bash scripts/kind/setup-kind.sh smoke
+
+.PHONY: kind-all
+kind-all:
+	bash scripts/kind/setup-kind.sh all
+
+# ------------------------------------------------------------
 # Cleanup
 # ------------------------------------------------------------
 
