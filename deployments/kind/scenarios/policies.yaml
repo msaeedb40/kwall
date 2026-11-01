@@ -1,0 +1,58 @@
+# KWALL Zero-Trust Network & Runtime Security Policies for Demo Scenarios
+apiVersion: kwall.io/v1alpha1
+kind: KwallNetworkPolicy
+metadata:
+  name: isolate-server-backend
+  namespace: demo-secure
+spec:
+  podSelector:
+    matchLabels:
+      app: server
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow port 80 only from frontend client pods
+    - from:
+        - podSelector:
+            matchLabels:
+              app: client
+      ports:
+        - protocol: TCP
+          port: 80
+      action: Allow
+  egress:
+    # Block outbound connections to external public IPs
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.244.0.0/16
+              - 10.96.0.0/12
+      action: Deny
+---
+apiVersion: kwall.io/v1alpha1
+kind: KwallRuntimePolicy
+metadata:
+  name: prevent-shell-and-escape
+  namespace: demo-secure
+spec:
+  podSelector:
+    matchLabels:
+      app: client
+  processPolicy:
+    deniedExecutables:
+      - /usr/bin/nc
+      - /bin/nc
+      - /usr/bin/netcat
+      - /usr/bin/ncat
+    blockedCommandLinePatterns:
+      - "*nc -e*"
+      - "*/bin/sh -i*"
+      - "*nsenter*"
+  fileIntegrityPolicy:
+    protectedPaths:
+      - /etc/shadow
+      - /etc/passwd
+      - /var/run/secrets/kubernetes.io/serviceaccount
+  action: Deny

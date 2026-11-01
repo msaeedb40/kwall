@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-secure
+  labels:
+    kwall.io/monitored: "true"
+---
+# Server Workload scheduled on Worker Node 2 (kwall-cluster-worker2)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: server-pod
+  namespace: demo-secure
+  labels:
+    app: server
+    tier: backend
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: kwall-cluster-worker2
+  containers:
+    - name: nginx-server
+      image: nginx:alpine
+      ports:
+        - containerPort: 80
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 50m
+          memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-svc
+  namespace: demo-secure
+spec:
+  selector:
+    app: server
+  ports:
+    - port: 80
+      targetPort: 80
+---
+# Client Workload scheduled on Worker Node 1 (kwall-cluster-worker)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: client-pod
+  namespace: demo-secure
+  labels:
+    app: client
+    tier: frontend
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: kwall-cluster-worker
+  containers:
+    - name: client-container
+      image: curlimages/curl:latest
+      command: ["/bin/sh", "-c", "while true; do sleep 3600; done"]
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 50m
+          memory: 64Mi
