@@ -135,3 +135,35 @@ fn test_kind_scenario_manifests_exist() {
     assert!(policies_yaml.contains("KwallNetworkPolicy"));
     assert!(policies_yaml.contains("KwallRuntimePolicy"));
 }
+
+#[test]
+fn test_kind_cilium_manifests_and_version() {
+    let base = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("deployments/kind/cilium");
+
+    let kind_cilium = base.join("kind-cilium-cluster.yaml");
+    let cilium_values = base.join("cilium-values.yaml");
+    let install_script = base.join("install-cilium.sh");
+
+    assert!(kind_cilium.exists(), "kind-cilium-cluster.yaml must exist");
+    assert!(cilium_values.exists(), "cilium-values.yaml must exist");
+    assert!(install_script.exists(), "install-cilium.sh must exist");
+
+    let kind_content = fs::read_to_string(&kind_cilium).unwrap();
+    assert!(kind_content.contains("disableDefaultCNI: true"));
+    assert!(kind_content.contains("kubeProxyMode: \"none\""));
+    assert!(kind_content.contains("kwall-cilium-cluster"));
+
+    let values_content = fs::read_to_string(&cilium_values).unwrap();
+    assert!(values_content.contains("v1.20.4"));
+    assert!(values_content.contains("kubeProxyReplacement: true"));
+
+    let script_content = fs::read_to_string(&install_script).unwrap();
+    assert!(script_content.contains("1.20.4"));
+}

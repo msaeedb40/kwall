@@ -1,0 +1,53 @@
+# ==============================================================================
+# Cilium 1.20.4 Helm Values for KinD & KWALL eBPF Coexistence
+# ==============================================================================
+# Target Cilium Version: 1.20.4
+image:
+  repository: quay.io/cilium/cilium
+  tag: v1.20.4
+  useDigest: false
+
+# Connect directly to the Kubernetes API server within KinD
+k8sServiceHost: kwall-cilium-cluster-control-plane
+k8sServicePort: 6443
+
+# Replace kube-proxy completely with Cilium eBPF implementation
+kubeProxyReplacement: true
+
+# BPF configuration & Coexistence with KWALL
+bpf:
+  masquerade: true
+  root: /sys/fs/bpf
+  # Ensure host filesystem BPF map mount is shared
+  hostLegacyRouting: false
+
+# Prevent cgroup collision with KWALL eBPF and container runtime mounts
+cgroup:
+  autoMount:
+    enabled: false
+  hostRoot: /sys/fs/cgroup
+
+# Routing and tunneling mode in KinD
+routingMode: tunnel
+tunnelProtocol: vxlan
+
+# IPAM configuration for KinD pod CIDR allocation
+ipam:
+  mode: kubernetes
+
+# Operator configuration
+operator:
+  replicas: 1
+  image:
+    repository: quay.io/cilium/operator
+    tag: v1.20.4
+    useDigest: false
+
+# Monitoring & Prometheus metrics
+prometheus:
+  enabled: true
+  port: 9962
+
+# Container security context
+securityContext:
+  privileged: true
