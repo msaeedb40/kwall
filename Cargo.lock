@@ -1321,6 +1321,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwall-threat-intel"
+version = "0.1.0"
+dependencies = [
+ "kwall-core",
+ "kwall-detection",
+ "kwall-event-enricher",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "kwall-tracing"
 version = "0.1.0"
 dependencies = [

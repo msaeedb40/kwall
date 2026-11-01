@@ -67,3 +67,4 @@ kwall-l7 = { path = "crates/kwall-l7" }
 kwall-sbom = { path = "crates/kwall-sbom" }
 kwall-forensics = { path = "crates/kwall-forensics" }
 kwall-tracing = { path = "crates/kwall-tracing" }
+kwall-threat-intel = { path = "crates/kwall-threat-intel" }

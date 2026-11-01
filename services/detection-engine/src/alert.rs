@@ -42,6 +42,10 @@ pub enum ThreatCategory {
     ImageProvenanceViolation,
     /// Unprecedented service-to-service communication edge or topology anomaly.
     TopologyAnomaly,
+    /// Known malicious indicator match from threat intelligence feeds (C2, malware IP, domain, hash).
+    ThreatIntelMatch,
+    /// Detection matching an active Sigma detection rule.
+    SigmaRuleMatch,
 }
 
 /// A structured, non-repudiable security alert produced by the KWALL detection engine.
