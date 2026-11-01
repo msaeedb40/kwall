@@ -67,8 +67,6 @@ jobs:
   ebpf-kernel-build:
     name: eBPF Aya Kernel Compilation
     runs-on: ubuntu-latest
-    # eBPF build requires nightly + bpf-linker, mark as non-blocking
-    continue-on-error: true
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -76,11 +74,13 @@ jobs:
       - name: Setup Rust Nightly for eBPF
         uses: dtolnay/rust-toolchain@nightly
         with:
-          targets: bpfel-unknown-none
           components: rust-src
 
-      - name: Install bpf-linker
-        run: cargo +nightly install bpf-linker || true
+      - name: Install bpf-linker (prebuilt)
+        run: |
+          BPF_LINKER_VERSION="0.12.0"
+          curl -sSL "https://github.com/aya-rs/bpf-linker/releases/download/v${BPF_LINKER_VERSION}/bpf-linker-x86_64-unknown-linux-musl.tar.zst" \
+            | sudo tar --zstd -x -C /usr/local/bin
 
       - name: Cache Cargo Registry & Build
         uses: actions/cache@v4
