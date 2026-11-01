@@ -1,0 +1,39 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kwall-alerts
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: kwall
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    role: alert-rules
+spec:
+  groups:
+    - name: kwall.security
+      rules:
+        - alert: KwallCriticalThreatDetected
+          expr: increase(kwall_threat_alerts_total{severity="critical"}[1m]) > 0
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Critical security threat detected by KWALL"
+            description: "A critical severity container escape or exploitation attempt was detected."
+
+        - alert: KwallHighPacketDropRate
+          expr: rate(kwall_packets_processed_total{action="drop"}[1m]) > 1000
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High packet drop rate on KWALL eBPF data plane"
+            description: "Over 1000 packets/sec are being dropped by XDP or TC policy enforcement."
+
+        - alert: KwallRingBufferBackpressure
+          expr: increase(kwall_ring_buffer_events_dropped_total[5m]) > 10
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "KWALL eBPF ring buffer event drops detected"
+            description: "Event pipeline is experiencing backpressure; ring buffer events are being dropped."

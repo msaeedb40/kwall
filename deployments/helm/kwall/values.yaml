@@ -1,0 +1,68 @@
+# Default values for kwall.
+# This is a YAML-formatted file.
+
+global:
+  clusterDomain: cluster.local
+  imagePullSecrets: []
+
+# Node Agent DaemonSet configuration
+agent:
+  enabled: true
+  image:
+    repository: ghcr.io/msaeedb40/kwall-agent
+    tag: v0.1.0
+    pullPolicy: IfNotPresent
+  failMode: fail_closed
+  ringBufferSize: 16777216 # 16 MB
+  logLevel: info
+  logFormat: json
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  securityContext:
+    privileged: true
+    readOnlyRootFilesystem: true
+    runAsUser: 0
+    runAsGroup: 0
+  hostMounts:
+    btfPath: /sys/kernel/btf
+    bpfFsPath: /sys/fs/bpf
+    cgroupPath: /sys/fs/cgroup
+    procPath: /proc
+
+# Control Plane Operator Deployment configuration
+operator:
+  enabled: true
+  replicas: 1
+  image:
+    repository: ghcr.io/msaeedb40/kwall-operator
+    tag: v0.1.0
+    pullPolicy: IfNotPresent
+  logLevel: info
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# Admission Webhook configuration
+webhook:
+  enabled: true
+  port: 8443
+  failurePolicy: Fail
+  certManager:
+    enabled: false
+
+# RBAC Configuration
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+  name: kwall

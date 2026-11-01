@@ -1,0 +1,8 @@
+[build]
+rustflags = ["-D", "warnings"]
+
+[target.bpfel-unknown-none]
+rustflags = [
+    "-C", "opt-level=3",
+    "-C", "panic=abort"
+]

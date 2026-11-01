@@ -1,0 +1,19 @@
+[package]
+name = "kwall-detection"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+kwall-core.workspace = true
+kwall-common.workspace = true
+kwall-config.workspace = true
+kwall-ebpf-common.workspace = true
+kwall-event-router.workspace = true
+kwall-event-enricher.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true

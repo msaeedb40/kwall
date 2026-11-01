@@ -1,0 +1,19 @@
+apiVersion: v2
+name: kwall
+description: KWALL - Kubernetes eBPF-Driven Zero-Trust Security Platform
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - security
+  - ebpf
+  - zero-trust
+  - xdp
+  - lsm
+  - kubernetes
+home: https://github.com/msaeedb40/kwall
+sources:
+  - https://github.com/msaeedb40/kwall
+maintainers:
+  - name: KWALL Maintainers
+    email: maintainers@kwall.io

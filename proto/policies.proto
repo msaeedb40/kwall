@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package kwall.policies.v1;
+
+service PolicyService {
+  rpc ValidatePolicy (ValidatePolicyRequest) returns (ValidatePolicyResponse);
+  rpc ApplyPolicy (ApplyPolicyRequest) returns (ApplyPolicyResponse);
+  rpc ListPolicies (ListPoliciesRequest) returns (ListPoliciesResponse);
+}
+
+message ValidatePolicyRequest {
+  string policy_yaml = 1;
+}
+
+message ValidatePolicyResponse {
+  bool valid = 1;
+  string error_message = 2;
+  uint32 rules_compiled = 3;
+}
+
+message ApplyPolicyRequest {
+  string policy_yaml = 1;
+  bool dry_run = 2;
+}
+
+message ApplyPolicyResponse {
+  bool applied = 3;
+  string message = 4;
+}
+
+message ListPoliciesRequest {
+  string namespace = 1;
+}
+
+message PolicySummary {
+  string name = 1;
+  string namespace = 2;
+  string kind = 3; // "KwallNetworkPolicy", "KwallRuntimePolicy"
+  uint32 rule_count = 4;
+}
+
+message ListPoliciesResponse {
+  repeated PolicySummary policies = 1;
+}

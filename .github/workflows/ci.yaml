@@ -1,0 +1,63 @@
+name: KWALL Continuous Integration
+
+on:
+  push:
+    branches: [ "main", "works" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  format-and-lint:
+    name: Code Formatting & Clippy Lints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Stable Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check Formatting
+        run: cargo fmt --all --check
+
+      - name: Run Clippy Linter
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    name: Workspace Unit & Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Stable Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run All Workspace Tests
+        run: cargo test --workspace --verbose
+
+  ebpf-kernel-build:
+    name: eBPF Aya Kernel Compilation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Nightly for eBPF
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: bpfel-unknown-none
+          components: rust-src
+
+      - name: Compile eBPF Bytecode
+        run: |
+          cargo +nightly build --manifest-path ebpf/Cargo.toml \
+            --target bpfel-unknown-none \
+            -Z build-std=core \
+            --release

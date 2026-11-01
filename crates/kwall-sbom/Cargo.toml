@@ -1,0 +1,21 @@
+[package]
+name = "kwall-sbom"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "KWALL Supply Chain Security, Cosign/Sigstore verification, CycloneDX/SPDX SBOM ingestion, runtime binary drift detection, and container FIM"
+
+[dependencies]
+kwall-core = { workspace = true }
+kwall-common = { workspace = true }
+kwall-ebpf-common = { workspace = true }
+kwall-event-router = { workspace = true }
+kwall-detection = { workspace = true }
+kwall-l7 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }

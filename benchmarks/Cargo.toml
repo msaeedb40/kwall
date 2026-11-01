@@ -1,0 +1,24 @@
+[package]
+name = "kwall-benchmarks"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "kwall-benchmarks"
+path = "src/main.rs"
+
+[dependencies]
+kwall-core.workspace = true
+kwall-common.workspace = true
+kwall-ebpf-common.workspace = true
+kwall-event-router.workspace = true
+kwall-event-enricher.workspace = true
+kwall-policy.workspace = true
+kwall-detection.workspace = true
+kwall-telemetry.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true

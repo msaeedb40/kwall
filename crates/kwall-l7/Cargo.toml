@@ -1,0 +1,19 @@
+[package]
+name = "kwall-l7"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "KWALL Layer 7 protocol parsing, security inspection, DNS anomaly detection, HTTP attack filtering, and TLS JA3/JA4 fingerprinting"
+
+[dependencies]
+kwall-core = { workspace = true }
+kwall-common = { workspace = true }
+kwall-ebpf-common = { workspace = true }
+kwall-detection = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }

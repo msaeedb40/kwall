@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package kwall.agent.v1;
+
+service AgentService {
+  rpc GetStatus (GetStatusRequest) returns (GetStatusResponse);
+  rpc ListEbpfPrograms (ListEbpfProgramsRequest) returns (ListEbpfProgramsResponse);
+}
+
+message GetStatusRequest {}
+
+message GetStatusResponse {
+  string node_name = 1;
+  string agent_version = 2;
+  string status = 3; // "READY", "DEGRADED", "ERROR"
+  bool btf_available = 4;
+  bool bpffs_mounted = 5;
+  bool cgroup_v2 = 6;
+  uint64 uptime_seconds = 7;
+}
+
+message ListEbpfProgramsRequest {}
+
+message EbpfProgramInfo {
+  string name = 1;
+  string program_type = 2; // "XDP", "TC", "LSM", "TRACEPOINT"
+  string attach_point = 3;
+  uint64 packets_or_events = 4;
+}
+
+message ListEbpfProgramsResponse {
+  repeated EbpfProgramInfo programs = 1;
+}

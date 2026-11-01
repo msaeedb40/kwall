@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package kwall.events.v1;
+
+service EventService {
+  rpc StreamEvents (StreamEventsRequest) returns (stream SecurityEvent);
+  rpc GetEventHistory (GetEventHistoryRequest) returns (GetEventHistoryResponse);
+}
+
+message StreamEventsRequest {
+  string namespace = 1;
+  string severity = 2; // "NOTICE", "WARNING", "ERROR", "CRITICAL"
+  string event_type = 3; // "NETWORK", "PROCESS", "LSM", "ALERT"
+}
+
+message SecurityEvent {
+  string event_id = 1;
+  uint64 timestamp_ns = 2;
+  string severity = 3;
+  string source = 4;
+  string payload_json = 5;
+  string pod_name = 6;
+  string namespace = 7;
+  string spiffe_id = 8;
+}
+
+message GetEventHistoryRequest {
+  uint32 limit = 1;
+  string namespace = 2;
+}
+
+message GetEventHistoryResponse {
+  repeated SecurityEvent events = 1;
+}

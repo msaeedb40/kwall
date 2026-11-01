@@ -1,0 +1,21 @@
+[package]
+name = "kwall-forensics"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "KWALL Automated Incident Response, Network Quarantine, Cgroup Freezing, PCAP Evidence Capture, and Incident Timeline Reconstruction"
+
+[dependencies]
+kwall-core = { workspace = true }
+kwall-common = { workspace = true }
+kwall-ebpf-common = { workspace = true }
+kwall-detection = { workspace = true }
+kwall-l7 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+libc = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }

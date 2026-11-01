@@ -1,0 +1,16 @@
+[workspace]
+
+[package]
+name = "kwall-ebpf"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+aya-ebpf = "0.3.0"
+network-types = "0.2.0"
+kwall-ebpf-common = { path = "../crates/kwall-ebpf-common", default-features = false }
+
+[[bin]]
+name = "kwall-ebpf"
+path = "src/main.rs"

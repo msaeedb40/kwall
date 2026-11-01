@@ -1,0 +1,16 @@
+[package]
+name = "kwall-event-enricher"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+kwall-core.workspace = true
+kwall-common.workspace = true
+kwall-event-router.workspace = true
+kwall-kubernetes.workspace = true
+kwall-workload.workspace = true
+kwall-identity.workspace = true
+serde.workspace = true
+tracing.workspace = true

@@ -1,0 +1,14 @@
+# Multi-stage Dockerfile for kwall-operator
+FROM rust:1.80-bullseye AS builder
+
+WORKDIR /usr/src/kwall
+COPY . .
+
+# Build release binary for operator
+RUN cargo build --release --bin kwall-operator
+
+FROM gcr.io/distroless/cc-debian12
+
+COPY --from=builder /usr/src/kwall/target/release/kwall-operator /usr/local/bin/kwall-operator
+
+ENTRYPOINT ["/usr/local/bin/kwall-operator"]

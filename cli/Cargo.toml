@@ -1,0 +1,26 @@
+[package]
+name = "kwall-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "kwall"
+path = "src/main.rs"
+
+[dependencies]
+kwall-core.workspace = true
+kwall-common.workspace = true
+kwall-config.workspace = true
+kwall-policy.workspace = true
+kwall-api.workspace = true
+clap.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+anyhow.workspace = true

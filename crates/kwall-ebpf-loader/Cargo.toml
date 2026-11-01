@@ -1,0 +1,16 @@
+[package]
+name = "kwall-ebpf-loader"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+kwall-core.workspace = true
+kwall-common.workspace = true
+kwall-ebpf-common.workspace = true
+kwall-event-router.workspace = true
+aya.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+thiserror.workspace = true

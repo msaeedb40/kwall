@@ -1,0 +1,20 @@
+# Multi-stage Dockerfile for kwall-agent
+FROM rust:1.80-bullseye AS builder
+
+WORKDIR /usr/src/kwall
+COPY . .
+
+# Build release binary for agent
+RUN cargo build --release --bin kwall-agent
+
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    libelf1 \
+    zlib1g \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/src/kwall/target/release/kwall-agent /usr/local/bin/kwall-agent
+
+ENTRYPOINT ["/usr/local/bin/kwall-agent"]

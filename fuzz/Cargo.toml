@@ -1,0 +1,21 @@
+[workspace]
+
+[package]
+name = "kwall-fuzz"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "fuzz_cidr_parser"
+path = "fuzz_targets/fuzz_cidr_parser.rs"
+
+[[bin]]
+name = "fuzz_packet_decode"
+path = "fuzz_targets/fuzz_packet_decode.rs"
+
+[dependencies]
+kwall-core = { path = "../crates/kwall-core" }
+kwall-ebpf-common = { path = "../crates/kwall-ebpf-common" }
+kwall-event-router = { path = "../crates/kwall-event-router" }
+kwall-policy = { path = "../crates/kwall-policy" }

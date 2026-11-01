@@ -1,0 +1,28 @@
+{{- if .Values.webhook.enabled -}}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: kwall-validating-webhook
+  labels:
+    app.kubernetes.io/name: kwall
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: kwall
+webhooks:
+  - name: validate.kwall.io
+    rules:
+      - apiGroups: ["kwall.io"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["kwallnetworkpolicies", "kwallruntimepolicies"]
+        scope: "Namespaced"
+    clientConfig:
+      service:
+        name: kwall-operator
+        namespace: {{ .Release.Namespace }}
+        path: "/validate-policy"
+        port: {{ .Values.webhook.port }}
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 5
+    failurePolicy: {{ .Values.webhook.failurePolicy }}
+{{- end }}

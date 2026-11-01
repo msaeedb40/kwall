@@ -1,0 +1,69 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "crates/*",
+    "agents/*",
+    "services/*",
+    "integrations/kubernetes/operator",
+    "cli",
+    "benchmarks",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["KWALL Contributors"]
+repository = "https://github.com/msaeedb40/kwall.git"
+
+[workspace.dependencies]
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+# Error handling & logging
+anyhow = "1.0"
+thiserror = "2.0"
+libc = "0.2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter", "fmt"] }
+
+# Async runtime
+tokio = { version = "1.41", features = ["full"] }
+futures = "0.3"
+
+# Serialization & Config
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.8"
+
+# eBPF
+aya = "0.16.0"
+
+# Kubernetes
+kube = { version = "4.2.0", default-features = false, features = ["client", "runtime", "derive"] }
+k8s-openapi = { version = "0.28.0", default-features = false, features = ["v1_32"] }
+schemars = { version = "1.2", features = ["derive"] }
+
+# Internal crates
+kwall-core = { path = "crates/kwall-core" }
+kwall-common = { path = "crates/kwall-common" }
+kwall-config = { path = "crates/kwall-config" }
+kwall-ebpf-common = { path = "crates/kwall-ebpf-common" }
+kwall-ebpf-loader = { path = "crates/kwall-ebpf-loader" }
+kwall-event-router = { path = "crates/kwall-event-router" }
+kwall-kubernetes = { path = "crates/kwall-kubernetes" }
+kwall-workload = { path = "crates/kwall-workload" }
+kwall-identity = { path = "crates/kwall-identity" }
+kwall-event-enricher = { path = "crates/kwall-event-enricher" }
+kwall-policy = { path = "crates/kwall-policy" }
+kwall-enforcement = { path = "crates/kwall-enforcement" }
+kwall-detection = { path = "services/detection-engine" }
+kwall-telemetry = { path = "crates/kwall-telemetry" }
+kwall-api = { path = "crates/kwall-api" }
+kwall-storage = { path = "crates/kwall-storage" }
+kwall-l7 = { path = "crates/kwall-l7" }
+kwall-sbom = { path = "crates/kwall-sbom" }
+kwall-forensics = { path = "crates/kwall-forensics" }
+kwall-tracing = { path = "crates/kwall-tracing" }

@@ -1,0 +1,17 @@
+[package]
+name = "kwall-kubernetes"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+kwall-core.workspace = true
+kwall-common.workspace = true
+kube.workspace = true
+k8s-openapi.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+futures.workspace = true

@@ -1,0 +1,17 @@
+[package]
+name = "kwall-telemetry"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+kwall-core.workspace = true
+kwall-common.workspace = true
+kwall-config.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

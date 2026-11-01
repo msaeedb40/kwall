@@ -1,0 +1,26 @@
+{{- if .Values.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kwall
+  labels:
+    app.kubernetes.io/name: kwall
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: kwall
+rules:
+  # Pod and Namespace informers
+  - apiGroups: [""]
+    resources: ["pods", "nodes", "namespaces"]
+    verbs: ["get", "list", "watch"]
+  # Node labeling for eBPF readiness
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["patch", "update"]
+  # KWALL CRDs
+  - apiGroups: ["kwall.io"]
+    resources: ["kwallnetworkpolicies", "kwallruntimepolicies"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["kwall.io"]
+    resources: ["kwallnetworkpolicies/status", "kwallruntimepolicies/status"]
+    verbs: ["get", "update", "patch"]
+{{- end }}

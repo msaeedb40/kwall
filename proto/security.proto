@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package kwall.security.v1;
+
+service SecurityService {
+  rpc ListThreats (ListThreatsRequest) returns (ListThreatsResponse);
+  rpc QuarantineWorkload (QuarantineWorkloadRequest) returns (QuarantineWorkloadResponse);
+}
+
+message ListThreatsRequest {
+  string min_severity = 1;
+  uint32 limit = 2;
+}
+
+message ThreatAlertProto {
+  string alert_id = 1;
+  uint64 timestamp_ns = 2;
+  string severity = 3;
+  string category = 4;
+  string mitre_technique = 5;
+  string title = 6;
+  string description = 7;
+  string pod_name = 8;
+  string namespace = 9;
+  string recommended_action = 10;
+}
+
+message ListThreatsResponse {
+  repeated ThreatAlertProto threats = 1;
+}
+
+message QuarantineWorkloadRequest {
+  string namespace = 1;
+  string pod_name = 2;
+  string reason = 3;
+}
+
+message QuarantineWorkloadResponse {
+  bool success = 1;
+  string status_message = 2;
+}
