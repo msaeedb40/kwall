@@ -11,7 +11,10 @@ pub mod memory;
 pub mod postgres;
 pub mod traits;
 
-pub use archival::{ArchivalError, ArchivalJob, ArchivalJobStatus, ArchivalManager, ArchivalStats, DataPartition, ObjectStorageTarget};
+pub use archival::{
+    ArchivalError, ArchivalJob, ArchivalJobStatus, ArchivalManager, ArchivalStats, DataPartition,
+    ObjectStorageTarget,
+};
 pub use clickhouse::{ClickHouseConfig, ClickHouseStorage};
 pub use hybrid::{FlowRecord, HybridStorageRouter, RiskScoreRecord, RouterStats};
 pub use memory::MemoryStorage;

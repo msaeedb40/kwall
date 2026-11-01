@@ -94,7 +94,9 @@ impl PreExecutionLsmSynchronizer {
     ) -> Result<PreExecutionSyncReceipt, LsmSyncError> {
         let synced = self.synced_containers.read().unwrap();
         if synced.contains_key(&event.container_id) {
-            return Err(LsmSyncError::AlreadySynchronized(event.container_id.clone()));
+            return Err(LsmSyncError::AlreadySynchronized(
+                event.container_id.clone(),
+            ));
         }
         drop(synced);
 
@@ -161,7 +163,7 @@ impl PreExecutionLsmSynchronizer {
             .unwrap_or_default()
             .as_nanos() as u64;
 
-        let sync_latency_micros = (end_time_ns.saturating_sub(start_time_ns) / 1000) as u64;
+        let sync_latency_micros = end_time_ns.saturating_sub(start_time_ns) / 1000;
 
         self.total_syncs.fetch_add(1, Ordering::Relaxed);
         self.race_preventions.fetch_add(1, Ordering::Relaxed);
@@ -193,7 +195,11 @@ impl PreExecutionLsmSynchronizer {
 
     /// Evaluates if an execution attempt in a cgroup is restricted by the pre-populated LSM map.
     /// Returns Some(RuntimePolicyAction) if an explicit restriction matches, or None if permitted.
-    pub fn evaluate_execution(&self, cgroup_id: u64, binary_path: &str) -> Option<RuntimePolicyAction> {
+    pub fn evaluate_execution(
+        &self,
+        cgroup_id: u64,
+        binary_path: &str,
+    ) -> Option<RuntimePolicyAction> {
         let hash = self.hash_binary_path(binary_path);
         let bpf_map = self.lsm_bpf_map_mock.read().unwrap();
         bpf_map.get(&(cgroup_id, hash)).map(|r| r.action)
@@ -210,7 +216,11 @@ impl PreExecutionLsmSynchronizer {
 
     /// Returns a sync receipt for a container if already synchronized.
     pub fn get_receipt(&self, container_id: &str) -> Option<PreExecutionSyncReceipt> {
-        self.synced_containers.read().unwrap().get(container_id).cloned()
+        self.synced_containers
+            .read()
+            .unwrap()
+            .get(container_id)
+            .cloned()
     }
 
     /// Derives 64-bit deterministic hash for a binary filesystem path.
@@ -253,7 +263,9 @@ mod tests {
             pod_name: Some("web-frontend-pod".to_string()),
             cgroup_id: 88888,
             raw_cgroup_path: "/kubepods/burstable/cnt-race-test".to_string(),
-            host_cgroup_dir: std::path::PathBuf::from("/sys/fs/cgroup/kubepods/burstable/cnt-race-test"),
+            host_cgroup_dir: std::path::PathBuf::from(
+                "/sys/fs/cgroup/kubepods/burstable/cnt-race-test",
+            ),
             is_cgroup_v2: true,
             is_rootless: true,
             readonly_rootfs: true,
@@ -285,10 +297,7 @@ mod tests {
 
         // Cleanup
         synchronizer.cleanup_container("cnt-race-test");
-        assert_eq!(
-            synchronizer.evaluate_execution(88888, "/bin/sh"),
-            None
-        );
+        assert_eq!(synchronizer.evaluate_execution(88888, "/bin/sh"), None);
     }
 
     #[test]
@@ -326,7 +335,9 @@ mod tests {
             pod_name: Some("ledger-pod".to_string()),
             cgroup_id: 99999,
             raw_cgroup_path: "/kubepods/burstable/cnt-finance-01".to_string(),
-            host_cgroup_dir: std::path::PathBuf::from("/sys/fs/cgroup/kubepods/burstable/cnt-finance-01"),
+            host_cgroup_dir: std::path::PathBuf::from(
+                "/sys/fs/cgroup/kubepods/burstable/cnt-finance-01",
+            ),
             is_cgroup_v2: true,
             is_rootless: true,
             readonly_rootfs: true,

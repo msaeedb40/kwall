@@ -1,0 +1,22 @@
+# Gitleaks Configuration for KWALL
+# Documentation: https://github.com/gitleaks/gitleaks
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore synthetic test key fixture in historical commit"
+commits = [
+  "3bb6abfaf8e85c61366f890d6228992ba7bb8116"
+]
+fingerprints = [
+  "3bb6abfaf8e85c61366f890d6228992ba7bb8116:crates/kwall-selfprotect/src/secure_mem.rs:private-key:451"
+]
+paths = [
+  '''crates/kwall-selfprotect/src/secure_mem\.rs''',
+  '''tests/.*''',
+]
+stopwords = [
+  "fake_key",
+  "kwall-synthetic",
+]

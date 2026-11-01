@@ -128,7 +128,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     sp_handle.abort();
-    let _ = self_protect.watchdog.pause();
+    self_protect.watchdog.pause();
     health.mark_unready();
     info!("KWALL Node Agent successfully terminated.");
     Ok(())

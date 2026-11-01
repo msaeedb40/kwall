@@ -197,10 +197,7 @@ impl Default for PolicyTranslationEngine {
             CloudProvider::KindCluster,
             vec!["10.244.0.0/16".to_string(), "172.18.0.0/16".to_string()],
         );
-        provider_default_cidrs.insert(
-            CloudProvider::BareMetal,
-            vec!["192.168.0.0/16".to_string()],
-        );
+        provider_default_cidrs.insert(CloudProvider::BareMetal, vec!["192.168.0.0/16".to_string()]);
 
         Self {
             provider_default_cidrs,
@@ -336,7 +333,9 @@ mod tests {
                 port: Some(5432),
                 protocol: Some("tcp".to_string()),
                 action: NetworkPolicyAction::Allow,
-                allowed_spiffe_identities: vec!["spiffe://c-eks-1.kwall.internal/ns/payments/sa/payment-service".to_string()],
+                allowed_spiffe_identities: vec![
+                    "spiffe://c-eks-1.kwall.internal/ns/payments/sa/payment-service".to_string(),
+                ],
             }],
         };
 

@@ -167,7 +167,8 @@ impl OpaRule for DisallowRootExecution {
                         "Container '{}' in pod '{}/{}' allows running as root UID 0",
                         c.name, pod.namespace, pod.name
                     ),
-                    remediation: "Set securityContext.runAsNonRoot=true and runAsUser > 0".to_string(),
+                    remediation: "Set securityContext.runAsNonRoot=true and runAsUser > 0"
+                        .to_string(),
                 });
             }
         }

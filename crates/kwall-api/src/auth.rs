@@ -102,8 +102,13 @@ impl Default for OidcConfig {
         Self {
             issuer_url: "https://auth.kwall.enterprise/auth/realms/security".to_string(),
             client_id: "kwall-management-plane".to_string(),
-            jwks_uri: "https://auth.kwall.enterprise/auth/realms/security/protocol/openid-connect/certs".to_string(),
-            allowed_audiences: vec!["kwall-management-plane".to_string(), "kwall-api".to_string()],
+            jwks_uri:
+                "https://auth.kwall.enterprise/auth/realms/security/protocol/openid-connect/certs"
+                    .to_string(),
+            allowed_audiences: vec![
+                "kwall-management-plane".to_string(),
+                "kwall-api".to_string(),
+            ],
             clock_skew_sec: 60,
         }
     }
@@ -130,7 +135,12 @@ impl OidcValidator {
         }
 
         // Check audience
-        if !self.config.allowed_audiences.iter().any(|a| a == &claims.aud) {
+        if !self
+            .config
+            .allowed_audiences
+            .iter()
+            .any(|a| a == &claims.aud)
+        {
             return Err(AuthError::AudienceMismatch {
                 expected: self.config.client_id.clone(),
                 actual: claims.aud.clone(),
@@ -246,10 +256,9 @@ impl RbacPolicy {
                     resource,
                     SecResource::Alert | SecResource::Workload | SecResource::ForensicRecord
                 ),
-                SecAction::Write => matches!(
-                    resource,
-                    SecResource::Alert | SecResource::ForensicRecord
-                ),
+                SecAction::Write => {
+                    matches!(resource, SecResource::Alert | SecResource::ForensicRecord)
+                }
                 SecAction::Delete | SecAction::Approve => false,
             },
 
@@ -293,7 +302,11 @@ impl RbacPolicy {
     }
 
     /// Enforces permission, returning `Result<(), AuthError>`.
-    pub fn enforce(role: &RbacRole, resource: SecResource, action: SecAction) -> Result<(), AuthError> {
+    pub fn enforce(
+        role: &RbacRole,
+        resource: SecResource,
+        action: SecAction,
+    ) -> Result<(), AuthError> {
         if Self::check_permission(role, resource, action) {
             Ok(())
         } else {
@@ -350,7 +363,9 @@ mod tests {
         };
 
         // Current time: 1,500,000,000 (well within exp)
-        assert!(validator.validate_claims(&valid_claims, 1_500_000_000).is_ok());
+        assert!(validator
+            .validate_claims(&valid_claims, 1_500_000_000)
+            .is_ok());
 
         // Test expired token
         let expired_claims = OidcClaims {
@@ -404,13 +419,19 @@ mod tests {
             roles: vec!["sec_analyst".into()],
             ..claims_admin.clone()
         };
-        assert_eq!(validator.extract_role(&claims_analyst), RbacRole::SecurityAnalyst);
+        assert_eq!(
+            validator.extract_role(&claims_analyst),
+            RbacRole::SecurityAnalyst
+        );
 
         let claims_editor = OidcClaims {
             roles: vec!["policy_editor".into()],
             ..claims_admin.clone()
         };
-        assert_eq!(validator.extract_role(&claims_editor), RbacRole::PolicyEditor);
+        assert_eq!(
+            validator.extract_role(&claims_editor),
+            RbacRole::PolicyEditor
+        );
 
         let claims_auditor = OidcClaims {
             roles: vec!["compliance_auditor".into()],
@@ -428,33 +449,95 @@ mod tests {
     #[test]
     fn test_rbac_permission_matrix() {
         // Admin can do anything
-        assert!(RbacPolicy::check_permission(&RbacRole::Admin, SecResource::EbpfEngine, SecAction::Execute));
-        assert!(RbacPolicy::check_permission(&RbacRole::Admin, SecResource::Policy, SecAction::Delete));
+        assert!(RbacPolicy::check_permission(
+            &RbacRole::Admin,
+            SecResource::EbpfEngine,
+            SecAction::Execute
+        ));
+        assert!(RbacPolicy::check_permission(
+            &RbacRole::Admin,
+            SecResource::Policy,
+            SecAction::Delete
+        ));
 
         // Analyst can execute on Alerts (quarantine pod)
-        assert!(RbacPolicy::check_permission(&RbacRole::SecurityAnalyst, SecResource::Alert, SecAction::Execute));
-        assert!(RbacPolicy::check_permission(&RbacRole::SecurityAnalyst, SecResource::ForensicRecord, SecAction::Write));
+        assert!(RbacPolicy::check_permission(
+            &RbacRole::SecurityAnalyst,
+            SecResource::Alert,
+            SecAction::Execute
+        ));
+        assert!(RbacPolicy::check_permission(
+            &RbacRole::SecurityAnalyst,
+            SecResource::ForensicRecord,
+            SecAction::Write
+        ));
         // Analyst CANNOT delete policy or modify eBPF engine
-        assert!(!RbacPolicy::check_permission(&RbacRole::SecurityAnalyst, SecResource::Policy, SecAction::Delete));
-        assert!(!RbacPolicy::check_permission(&RbacRole::SecurityAnalyst, SecResource::EbpfEngine, SecAction::Write));
+        assert!(!RbacPolicy::check_permission(
+            &RbacRole::SecurityAnalyst,
+            SecResource::Policy,
+            SecAction::Delete
+        ));
+        assert!(!RbacPolicy::check_permission(
+            &RbacRole::SecurityAnalyst,
+            SecResource::EbpfEngine,
+            SecAction::Write
+        ));
 
         // PolicyEditor can create/update policy but NOT quarantine pods
-        assert!(RbacPolicy::check_permission(&RbacRole::PolicyEditor, SecResource::Policy, SecAction::Write));
-        assert!(RbacPolicy::check_permission(&RbacRole::PolicyEditor, SecResource::Policy, SecAction::Delete));
-        assert!(!RbacPolicy::check_permission(&RbacRole::PolicyEditor, SecResource::Workload, SecAction::Execute));
+        assert!(RbacPolicy::check_permission(
+            &RbacRole::PolicyEditor,
+            SecResource::Policy,
+            SecAction::Write
+        ));
+        assert!(RbacPolicy::check_permission(
+            &RbacRole::PolicyEditor,
+            SecResource::Policy,
+            SecAction::Delete
+        ));
+        assert!(!RbacPolicy::check_permission(
+            &RbacRole::PolicyEditor,
+            SecResource::Workload,
+            SecAction::Execute
+        ));
 
         // Auditor can approve policies and read audit logs, but cannot write
-        assert!(RbacPolicy::check_permission(&RbacRole::Auditor, SecResource::Policy, SecAction::Approve));
-        assert!(RbacPolicy::check_permission(&RbacRole::Auditor, SecResource::AuditLog, SecAction::Read));
-        assert!(!RbacPolicy::check_permission(&RbacRole::Auditor, SecResource::Policy, SecAction::Write));
+        assert!(RbacPolicy::check_permission(
+            &RbacRole::Auditor,
+            SecResource::Policy,
+            SecAction::Approve
+        ));
+        assert!(RbacPolicy::check_permission(
+            &RbacRole::Auditor,
+            SecResource::AuditLog,
+            SecAction::Read
+        ));
+        assert!(!RbacPolicy::check_permission(
+            &RbacRole::Auditor,
+            SecResource::Policy,
+            SecAction::Write
+        ));
 
         // Viewer is read-only
-        assert!(RbacPolicy::check_permission(&RbacRole::Viewer, SecResource::Cluster, SecAction::Read));
-        assert!(!RbacPolicy::check_permission(&RbacRole::Viewer, SecResource::AuditLog, SecAction::Read)); // Viewer cannot read audit logs
-        assert!(!RbacPolicy::check_permission(&RbacRole::Viewer, SecResource::Policy, SecAction::Write));
+        assert!(RbacPolicy::check_permission(
+            &RbacRole::Viewer,
+            SecResource::Cluster,
+            SecAction::Read
+        ));
+        assert!(!RbacPolicy::check_permission(
+            &RbacRole::Viewer,
+            SecResource::AuditLog,
+            SecAction::Read
+        )); // Viewer cannot read audit logs
+        assert!(!RbacPolicy::check_permission(
+            &RbacRole::Viewer,
+            SecResource::Policy,
+            SecAction::Write
+        ));
 
         // Test enforce()
-        assert!(RbacPolicy::enforce(&RbacRole::Admin, SecResource::Cluster, SecAction::Write).is_ok());
+        assert!(
+            RbacPolicy::enforce(&RbacRole::Admin, SecResource::Cluster, SecAction::Write).is_ok()
+        );
         assert_eq!(
             RbacPolicy::enforce(&RbacRole::Viewer, SecResource::Policy, SecAction::Delete),
             Err(AuthError::PermissionDenied {

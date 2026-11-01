@@ -247,8 +247,8 @@ impl StreamBus {
     /// client library.  In `InProcess` mode it sends on the MPSC channel with
     /// adaptive backpressure (returns `Err(BackpressureExceeded)` when full).
     pub async fn publish(&self, event: StreamEvent) -> Result<(), StreamError> {
-        let payload_bytes = serde_json::to_vec(&event)
-            .map_err(|e| StreamError::Serialization(e.to_string()))?;
+        let payload_bytes =
+            serde_json::to_vec(&event).map_err(|e| StreamError::Serialization(e.to_string()))?;
 
         match self.backend {
             StreamBackend::NatsJetStream => {
@@ -346,15 +346,14 @@ mod tests {
 
     #[test]
     fn test_event_partition_key_and_subject() {
-        let ev = make_event("prod-us-east-1", "node-worker-1", "payments", "network.flow");
-        assert_eq!(
-            ev.partition_key(),
-            "prod-us-east-1/node-worker-1/payments"
+        let ev = make_event(
+            "prod-us-east-1",
+            "node-worker-1",
+            "payments",
+            "network.flow",
         );
-        assert_eq!(
-            ev.subject(),
-            "kwall.prod-us-east-1.payments.network.flow"
-        );
+        assert_eq!(ev.partition_key(), "prod-us-east-1/node-worker-1/payments");
+        assert_eq!(ev.subject(), "kwall.prod-us-east-1.payments.network.flow");
     }
 
     #[tokio::test]
@@ -406,7 +405,12 @@ mod tests {
 
         let result = bus.publish(make_event("c", "n", "ns", "t")).await;
         assert!(matches!(result, Err(StreamError::BackpressureExceeded)));
-        assert_eq!(bus.stats().backpressure_events.load(std::sync::atomic::Ordering::Relaxed), 1);
+        assert_eq!(
+            bus.stats()
+                .backpressure_events
+                .load(std::sync::atomic::Ordering::Relaxed),
+            1
+        );
     }
 
     #[tokio::test]

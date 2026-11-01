@@ -36,7 +36,9 @@ impl std::fmt::Display for WatchdogState {
 }
 
 /// System resource pressure levels driving degradation policy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 pub enum PressureLevel {
     /// System resources are healthy — full telemetry and enrichment active.
     Normal,
@@ -85,9 +87,9 @@ impl Default for WatchdogConfig {
             timeout_secs: 60,
             heartbeat_interval_secs: 15,
             enable_degradation: true,
-            moderate_pressure_threshold_bytes: 512 * 1024 * 1024,  // 512 MiB
-            high_pressure_threshold_bytes: 256 * 1024 * 1024,       // 256 MiB
-            critical_pressure_threshold_bytes: 128 * 1024 * 1024,   // 128 MiB
+            moderate_pressure_threshold_bytes: 512 * 1024 * 1024, // 512 MiB
+            high_pressure_threshold_bytes: 256 * 1024 * 1024,     // 256 MiB
+            critical_pressure_threshold_bytes: 128 * 1024 * 1024, // 128 MiB
         }
     }
 }
@@ -233,10 +235,7 @@ impl KernelWatchdog {
         *state = WatchdogState::Armed;
         *self.last_heartbeat.write().unwrap() = Some(Instant::now());
 
-        tracing::info!(
-            timeout = self.config.timeout_secs,
-            "Kernel watchdog armed"
-        );
+        tracing::info!(timeout = self.config.timeout_secs, "Kernel watchdog armed");
 
         Ok(())
     }
@@ -253,7 +252,9 @@ impl KernelWatchdog {
         drop(state);
 
         let sequence = self.heartbeat_sequence.fetch_add(1, Ordering::Relaxed);
-        self.metrics.total_heartbeats.fetch_add(1, Ordering::Relaxed);
+        self.metrics
+            .total_heartbeats
+            .fetch_add(1, Ordering::Relaxed);
 
         // In production: write 1 byte to /dev/watchdog to reset hardware timer
         let success = self.write_watchdog_ping();
@@ -480,7 +481,8 @@ impl KernelWatchdog {
         );
 
         *self.current_pressure.write().unwrap() = to;
-        self.is_degraded.store(to != PressureLevel::Normal, Ordering::Relaxed);
+        self.is_degraded
+            .store(to != PressureLevel::Normal, Ordering::Relaxed);
         self.metrics
             .total_degradation_transitions
             .fetch_add(1, Ordering::Relaxed);
@@ -637,12 +639,7 @@ mod tests {
         let watchdog = KernelWatchdog::new(config);
 
         // Simulate transition from Normal to High
-        watchdog.transition_pressure(
-            PressureLevel::Normal,
-            PressureLevel::High,
-            400,
-            1_000_000,
-        );
+        watchdog.transition_pressure(PressureLevel::Normal, PressureLevel::High, 400, 1_000_000);
 
         assert!(watchdog.is_degraded());
         assert_eq!(watchdog.pressure_level(), PressureLevel::High);

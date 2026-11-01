@@ -388,18 +388,8 @@ impl GraphQLGateway {
                     .as_ref()
                     .map_or(true, |n| f.namespace == *n)
             })
-            .filter(|f| {
-                filter
-                    .src_ip
-                    .as_ref()
-                    .map_or(true, |ip| f.src_ip == *ip)
-            })
-            .filter(|f| {
-                filter
-                    .dst_ip
-                    .as_ref()
-                    .map_or(true, |ip| f.dst_ip == *ip)
-            })
+            .filter(|f| filter.src_ip.as_ref().map_or(true, |ip| f.src_ip == *ip))
+            .filter(|f| filter.dst_ip.as_ref().map_or(true, |ip| f.dst_ip == *ip))
             .take(limit)
             .cloned()
             .collect()

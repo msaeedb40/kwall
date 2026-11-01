@@ -1,0 +1,9 @@
+# Cargo Audit Configuration for KWALL
+# Documentation: https://docs.rs/cargo-audit/latest/cargo_audit/config/
+
+[advisories]
+# RUSTSEC-2024-0449: unsafe-libyaml unmaintained warning (inherited from transitive serde_yaml)
+ignore = [
+    "RUSTSEC-2024-0449",
+]
+informational_warnings = ["unmaintained"]

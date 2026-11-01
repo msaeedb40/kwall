@@ -107,15 +107,10 @@ pub const STANDARD_CONTAINERD_SOCKETS: &[&str] = &[
     "/var/run/containerd/containerd.sock",
 ];
 
-pub const STANDARD_CRIO_SOCKETS: &[&str] = &[
-    "/var/run/crio/crio.sock",
-    "/run/crio/crio.sock",
-];
+pub const STANDARD_CRIO_SOCKETS: &[&str] = &["/var/run/crio/crio.sock", "/run/crio/crio.sock"];
 
-pub const STANDARD_DOCKERSHIM_SOCKETS: &[&str] = &[
-    "/run/cri-dockerd.sock",
-    "/var/run/dockershim.sock",
-];
+pub const STANDARD_DOCKERSHIM_SOCKETS: &[&str] =
+    &["/run/cri-dockerd.sock", "/var/run/dockershim.sock"];
 
 /// Direct CRI v1 Client and Event Streamer.
 pub struct CriClient {
@@ -154,7 +149,10 @@ impl CriClient {
     }
 
     /// Constructs a new CRI client connecting to a specific runtime socket.
-    pub fn new(runtime_type: RuntimeType, socket_path: impl Into<PathBuf>) -> Result<Self, CriError> {
+    pub fn new(
+        runtime_type: RuntimeType,
+        socket_path: impl Into<PathBuf>,
+    ) -> Result<Self, CriError> {
         let (event_sender, _) = broadcast::channel(1024);
         let socket_path = socket_path.into();
 
@@ -244,12 +242,21 @@ impl CriClient {
 
     /// Returns status information for a given container ID.
     pub fn get_container_status(&self, container_id: &str) -> Option<ContainerStatusInfo> {
-        self.active_containers.read().unwrap().get(container_id).cloned()
+        self.active_containers
+            .read()
+            .unwrap()
+            .get(container_id)
+            .cloned()
     }
 
     /// Returns a list of all currently tracked active containers.
     pub fn list_active_containers(&self) -> Vec<ContainerStatusInfo> {
-        self.active_containers.read().unwrap().values().cloned().collect()
+        self.active_containers
+            .read()
+            .unwrap()
+            .values()
+            .cloned()
+            .collect()
     }
 
     /// Returns total lifecycle events processed so far.
@@ -347,7 +354,9 @@ mod tests {
         };
 
         client.ingest_event(evt_deleted);
-        assert!(client.get_container_status("cnt-1234567890abcdef").is_none());
+        assert!(client
+            .get_container_status("cnt-1234567890abcdef")
+            .is_none());
         assert_eq!(client.total_events_processed(), 4);
     }
 }

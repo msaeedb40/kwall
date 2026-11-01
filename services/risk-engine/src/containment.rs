@@ -135,7 +135,8 @@ impl ContainmentTriggerManager {
                     "Risk score ({:.1} >= {:.1}) breaches quarantine threshold",
                     profile.composite_score, policy.quarantine_score_threshold
                 ));
-            } else if policy.quarantine_on_cloud_metadata_exposure && blast.cloud_metadata_reachable {
+            } else if policy.quarantine_on_cloud_metadata_exposure && blast.cloud_metadata_reachable
+            {
                 action = ContainmentAction::NetworkQuarantine;
                 reasons.push("Blast radius exposes Cloud Metadata (169.254.169.254)".to_string());
             } else if policy.quarantine_on_k8s_api_exposure && blast.k8s_api_server_reachable {
@@ -189,7 +190,12 @@ impl ContainmentTriggerManager {
 
     /// Lists all currently quarantined or contained workloads.
     pub fn list_active_containments(&self) -> Vec<ContainmentDecision> {
-        self.active_containments.read().unwrap().values().cloned().collect()
+        self.active_containments
+            .read()
+            .unwrap()
+            .values()
+            .cloned()
+            .collect()
     }
 
     /// Returns the total number of containment actions triggered.

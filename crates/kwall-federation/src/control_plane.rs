@@ -164,7 +164,10 @@ impl GlobalControlPlane {
     }
 
     /// Deregisters an existing cluster from federation.
-    pub fn deregister_cluster(&self, cluster_id: &str) -> Result<ClusterDescriptor, ControlPlaneError> {
+    pub fn deregister_cluster(
+        &self,
+        cluster_id: &str,
+    ) -> Result<ClusterDescriptor, ControlPlaneError> {
         let mut clusters = self.clusters.write().unwrap();
         clusters
             .remove(cluster_id)
@@ -189,7 +192,9 @@ impl GlobalControlPlane {
         cluster.agent_count = agent_count;
 
         // Auto-recover status if it was previously disconnected or degraded
-        if cluster.status == ClusterStatus::Disconnected || cluster.status == ClusterStatus::Degraded {
+        if cluster.status == ClusterStatus::Disconnected
+            || cluster.status == ClusterStatus::Degraded
+        {
             cluster.status = ClusterStatus::Connected;
         }
 
@@ -207,7 +212,10 @@ impl GlobalControlPlane {
     }
 
     /// Evaluates cluster health statuses against current time and heartbeat timeout.
-    pub fn evaluate_cluster_health(&self, current_timestamp_ns: u64) -> HashMap<String, ClusterStatus> {
+    pub fn evaluate_cluster_health(
+        &self,
+        current_timestamp_ns: u64,
+    ) -> HashMap<String, ClusterStatus> {
         let mut clusters = self.clusters.write().unwrap();
         let mut health_map = HashMap::new();
 
@@ -359,7 +367,9 @@ mod tests {
         // Duplicate registration should fail
         assert_eq!(
             cp.register_cluster(c1.clone()),
-            Err(ControlPlaneError::ClusterAlreadyExists("c-aws-01".to_string()))
+            Err(ControlPlaneError::ClusterAlreadyExists(
+                "c-aws-01".to_string()
+            ))
         );
 
         let retrieved = cp.get_cluster("c-aws-01").unwrap();

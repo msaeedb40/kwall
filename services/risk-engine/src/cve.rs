@@ -120,7 +120,11 @@ pub fn aggregate_cve_findings(findings: &[CveFinding]) -> CveRiskSummary {
 ///
 /// Returns `(critical_cve_count, high_cve_count, has_known_exploited)`.
 pub fn summary_to_scorer_inputs(summary: &CveRiskSummary) -> (u32, u32, bool) {
-    (summary.critical_count, summary.high_count, summary.has_known_exploited)
+    (
+        summary.critical_count,
+        summary.high_count,
+        summary.has_known_exploited,
+    )
 }
 
 #[cfg(test)]
@@ -140,9 +144,30 @@ mod tests {
     fn test_aggregate_cve_findings_log4shell() {
         // Simulate Log4Shell (CVE-2021-44228) + several high/medium CVEs.
         let findings = vec![
-            CveFinding::new("CVE-2021-44228", 10.0, true, "log4j-core", "2.14.1", Some("2.17.1".to_string())),
-            CveFinding::new("CVE-2022-22965", 9.8, true, "spring-core", "5.3.17", Some("5.3.18".to_string())),
-            CveFinding::new("CVE-2023-1234", 7.5, false, "openssl", "1.1.1q", Some("1.1.1t".to_string())),
+            CveFinding::new(
+                "CVE-2021-44228",
+                10.0,
+                true,
+                "log4j-core",
+                "2.14.1",
+                Some("2.17.1".to_string()),
+            ),
+            CveFinding::new(
+                "CVE-2022-22965",
+                9.8,
+                true,
+                "spring-core",
+                "5.3.17",
+                Some("5.3.18".to_string()),
+            ),
+            CveFinding::new(
+                "CVE-2023-1234",
+                7.5,
+                false,
+                "openssl",
+                "1.1.1q",
+                Some("1.1.1t".to_string()),
+            ),
             CveFinding::new("CVE-2023-5678", 4.3, false, "curl", "7.88.0", None),
         ];
 

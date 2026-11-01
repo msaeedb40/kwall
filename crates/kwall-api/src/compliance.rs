@@ -107,7 +107,9 @@ impl ComplianceReport {
                 out.push_str(&format!("        Remediation: {}\n", rem));
             }
         }
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out
     }
 
@@ -136,15 +138,25 @@ impl ComplianceEngine {
         evals.push(ControlEvaluation {
             control_id: "CIS-5.2.1".to_string(),
             title: "Kernel LSM Binary Execution & File Integrity".to_string(),
-            description: "Restrict unauthorized binaries and protect sensitive files via bpf_lsm".to_string(),
-            status: if lsm_active { ControlStatus::Passed } else { ControlStatus::Failed },
-            evidence: if lsm_active {
-                "bpf_lsm hooks bprm_check_security and file_open active on all worker nodes".to_string()
+            description: "Restrict unauthorized binaries and protect sensitive files via bpf_lsm"
+                .to_string(),
+            status: if lsm_active {
+                ControlStatus::Passed
             } else {
-                "eBPF LSM hooks are not loaded or kernel does not support BPF_PROG_TYPE_LSM".to_string()
+                ControlStatus::Failed
+            },
+            evidence: if lsm_active {
+                "bpf_lsm hooks bprm_check_security and file_open active on all worker nodes"
+                    .to_string()
+            } else {
+                "eBPF LSM hooks are not loaded or kernel does not support BPF_PROG_TYPE_LSM"
+                    .to_string()
             },
             remediation: if !lsm_active {
-                Some("Enable lsm=bpf,apparmor in GRUB cmdline and restart kwall-node-agent".to_string())
+                Some(
+                    "Enable lsm=bpf,apparmor in GRUB cmdline and restart kwall-node-agent"
+                        .to_string(),
+                )
             } else {
                 None
             },
@@ -154,10 +166,16 @@ impl ComplianceEngine {
         evals.push(ControlEvaluation {
             control_id: "CIS-5.3.2".to_string(),
             title: "File Integrity Monitoring for Control Plane Manifests".to_string(),
-            description: "Monitor manifest and crypto changes via eBPF inode notifications".to_string(),
-            status: if fim_active { ControlStatus::Passed } else { ControlStatus::Failed },
+            description: "Monitor manifest and crypto changes via eBPF inode notifications"
+                .to_string(),
+            status: if fim_active {
+                ControlStatus::Passed
+            } else {
+                ControlStatus::Failed
+            },
             evidence: if fim_active {
-                "eBPF FIM tracking inode modifications across /etc/kubernetes and /var/lib/kubelet".to_string()
+                "eBPF FIM tracking inode modifications across /etc/kubernetes and /var/lib/kubelet"
+                    .to_string()
             } else {
                 "FIM module disabled or watch directory unmounted".to_string()
             },
@@ -169,14 +187,23 @@ impl ComplianceEngine {
             control_id: "CIS-5.4.1".to_string(),
             title: "Network Policy Ingress/Egress Isolation".to_string(),
             description: "Default-deny network policies enforced at XDP/TC layer".to_string(),
-            status: if xdp_egress_restricted { ControlStatus::Passed } else { ControlStatus::Warning },
-            evidence: if xdp_egress_restricted {
-                "XDP egress drop filter enforcing namespace boundaries and CIDR allowlists".to_string()
+            status: if xdp_egress_restricted {
+                ControlStatus::Passed
             } else {
-                "Some namespaces lack explicit NetworkPolicy; traffic falls back to bridge default".to_string()
+                ControlStatus::Warning
+            },
+            evidence: if xdp_egress_restricted {
+                "XDP egress drop filter enforcing namespace boundaries and CIDR allowlists"
+                    .to_string()
+            } else {
+                "Some namespaces lack explicit NetworkPolicy; traffic falls back to bridge default"
+                    .to_string()
             },
             remediation: if !xdp_egress_restricted {
-                Some("Deploy default-deny KwallSecurityPolicy to unrestricted namespaces".to_string())
+                Some(
+                    "Deploy default-deny KwallSecurityPolicy to unrestricted namespaces"
+                        .to_string(),
+                )
             } else {
                 None
             },
@@ -186,8 +213,13 @@ impl ComplianceEngine {
         evals.push(ControlEvaluation {
             control_id: "CIS-4.1.5".to_string(),
             title: "Host Syscall Audit Ingestion".to_string(),
-            description: "Ingest and chain raw kernel audit logs for tamper-evident reporting".to_string(),
-            status: if auditd_ingestion_healthy { ControlStatus::Passed } else { ControlStatus::Warning },
+            description: "Ingest and chain raw kernel audit logs for tamper-evident reporting"
+                .to_string(),
+            status: if auditd_ingestion_healthy {
+                ControlStatus::Passed
+            } else {
+                ControlStatus::Warning
+            },
             evidence: if auditd_ingestion_healthy {
                 "Ring-buffer audit queue operating with zero backlog drops".to_string()
             } else {
@@ -196,7 +228,12 @@ impl ComplianceEngine {
             remediation: None,
         });
 
-        Self::compile_report(ComplianceFramework::CisKubernetesV1_8, cluster_id, timestamp_ns, evals)
+        Self::compile_report(
+            ComplianceFramework::CisKubernetesV1_8,
+            cluster_id,
+            timestamp_ns,
+            evals,
+        )
     }
 
     /// Evaluates the cluster against SOC 2 Type II Security & Confidentiality Criteria.
@@ -241,8 +278,13 @@ impl ComplianceEngine {
         evals.push(ControlEvaluation {
             control_id: "SOC2-CC6.6".to_string(),
             title: "Cryptographic Tamper-Evident Administrative Audit".to_string(),
-            description: "SHA-256 hash chaining of all administrative and policy changes".to_string(),
-            status: if hash_chained_audit { ControlStatus::Passed } else { ControlStatus::Failed },
+            description: "SHA-256 hash chaining of all administrative and policy changes"
+                .to_string(),
+            status: if hash_chained_audit {
+                ControlStatus::Passed
+            } else {
+                ControlStatus::Failed
+            },
             evidence: if hash_chained_audit {
                 "AuditLog ledger verified; hash chain intact with zero tampering events".to_string()
             } else {
@@ -251,7 +293,12 @@ impl ComplianceEngine {
             remediation: None,
         });
 
-        Self::compile_report(ComplianceFramework::Soc2Type2, cluster_id, timestamp_ns, evals)
+        Self::compile_report(
+            ComplianceFramework::Soc2Type2,
+            cluster_id,
+            timestamp_ns,
+            evals,
+        )
     }
 
     /// Evaluates the cluster against PCI-DSS v4.0 Network & System Security Requirements.
@@ -268,10 +315,16 @@ impl ComplianceEngine {
         evals.push(ControlEvaluation {
             control_id: "PCI-1.2".to_string(),
             title: "Network Security Controls & CDE Isolation".to_string(),
-            description: "Restricting traffic between CDE namespaces and untrusted networks".to_string(),
-            status: if cde_isolated { ControlStatus::Passed } else { ControlStatus::Failed },
+            description: "Restricting traffic between CDE namespaces and untrusted networks"
+                .to_string(),
+            status: if cde_isolated {
+                ControlStatus::Passed
+            } else {
+                ControlStatus::Failed
+            },
             evidence: if cde_isolated {
-                "eBPF TC egress filters actively blocking non-CDE outbound communication".to_string()
+                "eBPF TC egress filters actively blocking non-CDE outbound communication"
+                    .to_string()
             } else {
                 "Payment namespace allows broad outbound egress".to_string()
             },
@@ -300,17 +353,29 @@ impl ComplianceEngine {
         evals.push(ControlEvaluation {
             control_id: "PCI-11.5".to_string(),
             title: "Change-Detection Mechanism (FIM) for Critical System Files".to_string(),
-            description: "Alert on unauthorized modifications of critical system and application files".to_string(),
-            status: if fim_active { ControlStatus::Passed } else { ControlStatus::Failed },
+            description:
+                "Alert on unauthorized modifications of critical system and application files"
+                    .to_string(),
+            status: if fim_active {
+                ControlStatus::Passed
+            } else {
+                ControlStatus::Failed
+            },
             evidence: if fim_active {
-                "eBPF FIM module actively monitoring binaries, libraries, and config directories".to_string()
+                "eBPF FIM module actively monitoring binaries, libraries, and config directories"
+                    .to_string()
             } else {
                 "FIM module not loaded".to_string()
             },
             remediation: None,
         });
 
-        Self::compile_report(ComplianceFramework::PciDssV4_0, cluster_id, timestamp_ns, evals)
+        Self::compile_report(
+            ComplianceFramework::PciDssV4_0,
+            cluster_id,
+            timestamp_ns,
+            evals,
+        )
     }
 
     fn compile_report(
@@ -320,9 +385,18 @@ impl ComplianceEngine {
         evaluations: Vec<ControlEvaluation>,
     ) -> ComplianceReport {
         let total_controls = evaluations.len();
-        let passed_controls = evaluations.iter().filter(|e| e.status == ControlStatus::Passed).count();
-        let warning_controls = evaluations.iter().filter(|e| e.status == ControlStatus::Warning).count();
-        let failed_controls = evaluations.iter().filter(|e| e.status == ControlStatus::Failed).count();
+        let passed_controls = evaluations
+            .iter()
+            .filter(|e| e.status == ControlStatus::Passed)
+            .count();
+        let warning_controls = evaluations
+            .iter()
+            .filter(|e| e.status == ControlStatus::Warning)
+            .count();
+        let failed_controls = evaluations
+            .iter()
+            .filter(|e| e.status == ControlStatus::Failed)
+            .count();
 
         let score_percent = if total_controls > 0 {
             // Passed = 1.0, Warning = 0.5, Failed = 0.0
@@ -359,10 +433,10 @@ mod tests {
         let rep = ComplianceEngine::evaluate_cis(
             "prod-us-east-1",
             1_700_000_000_000_000_000,
-            true,  // lsm_active
-            true,  // fim_active
-            true,  // xdp_egress_restricted
-            true,  // auditd_ingestion_healthy
+            true, // lsm_active
+            true, // fim_active
+            true, // xdp_egress_restricted
+            true, // auditd_ingestion_healthy
         );
 
         assert_eq!(rep.framework, ComplianceFramework::CisKubernetesV1_8);
@@ -407,7 +481,11 @@ mod tests {
         assert_eq!(rep.failed_controls, 1);
         assert!((rep.score_percent - 66.66).abs() < 0.1);
 
-        let fail_eval = rep.evaluations.iter().find(|e| e.control_id == "PCI-1.2").unwrap();
+        let fail_eval = rep
+            .evaluations
+            .iter()
+            .find(|e| e.control_id == "PCI-1.2")
+            .unwrap();
         assert_eq!(fail_eval.status, ControlStatus::Failed);
         assert!(fail_eval.remediation.is_some());
     }

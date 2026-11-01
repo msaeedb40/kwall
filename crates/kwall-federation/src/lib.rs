@@ -98,7 +98,10 @@ impl FederationManager {
             .ok_or_else(|| format!("Target cluster '{}' not registered", cluster_id))?;
 
         if cluster.status == ClusterStatus::Disconnected {
-            return Err(format!("Cluster '{}' is currently disconnected", cluster_id));
+            return Err(format!(
+                "Cluster '{}' is currently disconnected",
+                cluster_id
+            ));
         }
 
         self.translation_engine

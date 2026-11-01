@@ -3,6 +3,8 @@
 //! Provides a hierarchical, async GraphQL API gateway and OpenAPI v3 REST API
 //! for multi-cluster KWALL security management.
 
+#![allow(clippy::unnecessary_map_or)]
+
 pub mod schema;
 
 pub use schema::*;

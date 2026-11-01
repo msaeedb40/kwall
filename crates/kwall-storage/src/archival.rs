@@ -62,7 +62,12 @@ impl ObjectStorageTarget {
     /// Returns the base URI for this storage target.
     pub fn uri(&self) -> String {
         match self {
-            Self::S3 { bucket, prefix, region, .. } => {
+            Self::S3 {
+                bucket,
+                prefix,
+                region,
+                ..
+            } => {
                 format!("s3://{}/{} ({})", bucket, prefix, region)
             }
             Self::Gcs { bucket, prefix, .. } => {
@@ -235,7 +240,10 @@ impl ArchivalManager {
         partition: DataPartition,
         now_ns: u64,
     ) -> Result<ArchivalJob, ArchivalError> {
-        let job_id = format!("arch-{:06}", self.job_counter.fetch_add(1, Ordering::Relaxed));
+        let job_id = format!(
+            "arch-{:06}",
+            self.job_counter.fetch_add(1, Ordering::Relaxed)
+        );
         let prefix = match &self.target {
             ObjectStorageTarget::S3 { prefix, .. } => prefix.clone(),
             ObjectStorageTarget::Gcs { prefix, .. } => prefix.clone(),
@@ -246,7 +254,9 @@ impl ArchivalManager {
 
         let object_key = partition.object_key(&prefix);
         let compressed_bytes = partition.estimated_compressed_bytes();
-        let savings = partition.uncompressed_bytes.saturating_sub(compressed_bytes);
+        let savings = partition
+            .uncompressed_bytes
+            .saturating_sub(compressed_bytes);
 
         info!(
             job_id = %job_id,

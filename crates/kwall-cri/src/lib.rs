@@ -21,8 +21,8 @@ pub use cgroup::{
     OciBundleConfig, OciCgroupResolver, OciResolutionError, ResolvedContainerCgroupContext,
 };
 pub use client::{
-    ContainerLifecycleEvent, ContainerLifecycleEventType, ContainerStatusInfo, CriClient,
-    CriError, RuntimeType,
+    ContainerLifecycleEvent, ContainerLifecycleEventType, ContainerStatusInfo, CriClient, CriError,
+    RuntimeType,
 };
 pub use lsm_sync::{
     LsmBinaryRestriction, LsmSyncError, PreExecutionLsmSynchronizer, PreExecutionSyncReceipt,
@@ -39,7 +39,10 @@ pub struct CriIntegrationManager {
 
 impl CriIntegrationManager {
     /// Constructs a manager with explicit runtime type and socket path.
-    pub fn new(runtime_type: RuntimeType, socket_path: impl Into<std::path::PathBuf>) -> Result<Self, CriError> {
+    pub fn new(
+        runtime_type: RuntimeType,
+        socket_path: impl Into<std::path::PathBuf>,
+    ) -> Result<Self, CriError> {
         let client = Arc::new(CriClient::new(runtime_type, socket_path)?);
         let cgroup_resolver = Arc::new(OciCgroupResolver::default());
         let lsm_synchronizer = Arc::new(PreExecutionLsmSynchronizer::default());
@@ -157,10 +160,7 @@ mod tests {
         let action = manager
             .lsm_synchronizer
             .evaluate_execution(r.cgroup_id, "/bin/sh");
-        assert_eq!(
-            action,
-            Some(kwall_policy::crd::RuntimePolicyAction::Deny)
-        );
+        assert_eq!(action, Some(kwall_policy::crd::RuntimePolicyAction::Deny));
 
         // Container started event
         let started_event = ContainerLifecycleEvent {

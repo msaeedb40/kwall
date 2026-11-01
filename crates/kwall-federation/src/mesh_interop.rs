@@ -323,9 +323,7 @@ mod tests {
         let manager = MeshInteropManager::default();
 
         let probe = EnvironmentProbe {
-            loaded_bpf_maps: vec![
-                "cilium_kwall_conflict_map".to_string(),
-            ],
+            loaded_bpf_maps: vec!["cilium_kwall_conflict_map".to_string()],
             cni_conflist_path: None,
             detected_processes: vec!["cilium-agent".to_string()],
             bpffs_root: PathBuf::from("/sys/fs/bpf/kwall"),

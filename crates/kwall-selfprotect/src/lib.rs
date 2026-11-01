@@ -182,17 +182,10 @@ impl SelfProtectionEngine {
             }
         }
 
-        let active_cert_serial = self
-            .cert_manager
-            .active_certificate()
-            .map(|c| c.serial);
+        let active_cert_serial = self.cert_manager.active_certificate().map(|c| c.serial);
 
         // 5. Compute overall status
-        let status = self.compute_status(
-            &integrity_result,
-            watchdog_state,
-            pressure_level,
-        );
+        let status = self.compute_status(&integrity_result, watchdog_state, pressure_level);
 
         *self.status.write().unwrap() = status.clone();
 
@@ -233,9 +226,7 @@ impl SelfProtectionEngine {
 
         SelfProtectionMetrics {
             total_cycles: self.total_cycles.load(Ordering::Relaxed),
-            integrity_violations_total: *integrity_metrics
-                .get("total_violations")
-                .unwrap_or(&0),
+            integrity_violations_total: *integrity_metrics.get("total_violations").unwrap_or(&0),
             watchdog_timeouts_total: watchdog_metrics.total_timeouts,
             cert_rotations_total: cert_metrics.total_rotations,
             degradation_transitions_total: watchdog_metrics.total_degradation_transitions,
@@ -292,7 +283,13 @@ mod tests {
 
     #[test]
     fn test_self_protection_engine_healthy_cycle() {
-        let tmp = std::env::temp_dir().join(format!("kwall_engine_healthy_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let tmp = std::env::temp_dir().join(format!(
+            "kwall_engine_healthy_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
         let _ = std::fs::create_dir_all(&tmp);
         #[cfg(unix)]
         {
@@ -394,11 +391,7 @@ mod tests {
             is_clean: false,
         };
 
-        let status = engine.compute_status(
-            &integrity,
-            WatchdogState::Armed,
-            PressureLevel::Normal,
-        );
+        let status = engine.compute_status(&integrity, WatchdogState::Armed, PressureLevel::Normal);
         assert_eq!(status, SelfProtectionStatus::Compromised);
     }
 
@@ -434,11 +427,8 @@ mod tests {
             is_clean: true,
         };
 
-        let status = engine.compute_status(
-            &clean_integrity,
-            WatchdogState::Armed,
-            PressureLevel::High,
-        );
+        let status =
+            engine.compute_status(&clean_integrity, WatchdogState::Armed, PressureLevel::High);
         assert_eq!(status, SelfProtectionStatus::Degraded);
     }
 }

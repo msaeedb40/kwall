@@ -15,10 +15,10 @@ use std::sync::{Arc, RwLock};
 /// Operational risk level category.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum RiskTier {
-    Low,       // 0 - 29
-    Medium,    // 30 - 59
-    High,      // 60 - 84
-    Critical,  // 85 - 100
+    Low,      // 0 - 29
+    Medium,   // 30 - 59
+    High,     // 60 - 84
+    Critical, // 85 - 100
 }
 
 impl std::fmt::Display for RiskTier {
@@ -115,11 +115,17 @@ impl WorkloadRiskScorer {
         let mut anomaly_score: f64 = 0.0;
         if inputs.anomaly_count > 0 {
             anomaly_score += (inputs.anomaly_count as f64 * 3.0).min(10.0);
-            findings.push(format!("{} runtime anomalies detected", inputs.anomaly_count));
+            findings.push(format!(
+                "{} runtime anomalies detected",
+                inputs.anomaly_count
+            ));
         }
         if inputs.mitre_critical_alerts > 0 {
             anomaly_score += (inputs.mitre_critical_alerts as f64 * 7.5).min(15.0);
-            findings.push(format!("{} MITRE ATT&CK critical security alerts", inputs.mitre_critical_alerts));
+            findings.push(format!(
+                "{} MITRE ATT&CK critical security alerts",
+                inputs.mitre_critical_alerts
+            ));
         }
         anomaly_score = anomaly_score.min(25.0);
 
@@ -127,11 +133,17 @@ impl WorkloadRiskScorer {
         let mut vuln_score: f64 = 0.0;
         if inputs.critical_cve_count > 0 {
             vuln_score += (inputs.critical_cve_count as f64 * 6.0).min(12.0);
-            findings.push(format!("{} Critical CVEs in container image", inputs.critical_cve_count));
+            findings.push(format!(
+                "{} Critical CVEs in container image",
+                inputs.critical_cve_count
+            ));
         }
         if inputs.high_cve_count > 0 {
             vuln_score += (inputs.high_cve_count as f64 * 2.0).min(8.0);
-            findings.push(format!("{} High severity CVEs in container image", inputs.high_cve_count));
+            findings.push(format!(
+                "{} High severity CVEs in container image",
+                inputs.high_cve_count
+            ));
         }
         if inputs.has_known_exploited_vulnerability {
             vuln_score += 5.0;
@@ -151,7 +163,10 @@ impl WorkloadRiskScorer {
         }
         if inputs.open_port_count > 3 {
             net_score += (inputs.open_port_count as f64 * 1.5).min(8.0);
-            findings.push(format!("{} open listening ports exposed", inputs.open_port_count));
+            findings.push(format!(
+                "{} open listening ports exposed",
+                inputs.open_port_count
+            ));
         }
         net_score = net_score.min(25.0);
 
@@ -175,7 +190,10 @@ impl WorkloadRiskScorer {
         }
         if !inputs.dangerous_capabilities.is_empty() {
             priv_score = (priv_score + 5.0).min(25.0);
-            findings.push(format!("Elevated Linux capabilities: {:?}", inputs.dangerous_capabilities));
+            findings.push(format!(
+                "Elevated Linux capabilities: {:?}",
+                inputs.dangerous_capabilities
+            ));
         }
         priv_score = priv_score.min(25.0);
 
@@ -211,7 +229,11 @@ impl WorkloadRiskScorer {
     }
 
     /// Applies time-based benign activity score decay to an existing profile.
-    pub fn apply_decay(&self, workload_id: &str, elapsed_minutes: f64) -> Option<WorkloadRiskProfile> {
+    pub fn apply_decay(
+        &self,
+        workload_id: &str,
+        elapsed_minutes: f64,
+    ) -> Option<WorkloadRiskProfile> {
         let mut profiles = self.profiles.write().unwrap();
         if let Some(profile) = profiles.get_mut(workload_id) {
             let decay_factor = (1.0 - self.decay_rate_per_minute).powf(elapsed_minutes);
@@ -234,7 +256,8 @@ impl WorkloadRiskScorer {
 
     /// Returns all tracked workload risk profiles sorted from highest to lowest risk.
     pub fn list_profiles_by_risk(&self) -> Vec<WorkloadRiskProfile> {
-        let mut list: Vec<WorkloadRiskProfile> = self.profiles.read().unwrap().values().cloned().collect();
+        let mut list: Vec<WorkloadRiskProfile> =
+            self.profiles.read().unwrap().values().cloned().collect();
         list.sort_by(|a, b| b.composite_score.partial_cmp(&a.composite_score).unwrap());
         list
     }
@@ -249,13 +272,8 @@ mod tests {
         let scorer = WorkloadRiskScorer::default();
         let inputs = WorkloadRiskInputs::default(); // all clean
 
-        let profile = scorer.evaluate_workload(
-            "w-clean",
-            "nginx-pod",
-            "default",
-            &inputs,
-            1_000_000,
-        );
+        let profile =
+            scorer.evaluate_workload("w-clean", "nginx-pod", "default", &inputs, 1_000_000);
 
         assert_eq!(profile.composite_score, 0.0);
         assert_eq!(profile.tier, RiskTier::Low);

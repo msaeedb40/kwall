@@ -10,7 +10,8 @@ use std::sync::{Arc, RwLock};
 use thiserror::Error;
 
 /// Genesis block hash for KWALL audit chains.
-pub const AUDIT_GENESIS_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
+pub const AUDIT_GENESIS_HASH: &str =
+    "0000000000000000000000000000000000000000000000000000000000000000";
 
 /// Audit logging errors.
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -80,6 +81,7 @@ pub struct AuditRecord {
 
 impl AuditRecord {
     /// Computes the deterministic SHA-256 digest for an audit entry payload.
+    #[allow(clippy::too_many_arguments)]
     pub fn compute_digest(
         sequence: u64,
         timestamp_ns: u64,
@@ -130,6 +132,7 @@ impl AuditLog {
     }
 
     /// Appends a new immutable administrative action record to the chained log.
+    #[allow(clippy::too_many_arguments)]
     pub fn append(
         &self,
         timestamp_ns: u64,
@@ -350,7 +353,10 @@ mod tests {
 
         // Integrity check MUST fail with DigestTampered
         let err = audit.verify_integrity().unwrap_err();
-        assert!(matches!(err, AuditError::DigestTampered { sequence: 0, .. }));
+        assert!(matches!(
+            err,
+            AuditError::DigestTampered { sequence: 0, .. }
+        ));
     }
 
     #[test]

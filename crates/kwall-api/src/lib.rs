@@ -9,9 +9,7 @@ pub mod auth;
 pub mod compliance;
 pub mod server;
 
-pub use audit::{
-    AuditError, AuditLog, AuditRecord, AuditStatus, AUDIT_GENESIS_HASH,
-};
+pub use audit::{AuditError, AuditLog, AuditRecord, AuditStatus, AUDIT_GENESIS_HASH};
 pub use auth::{
     verify_bearer_token, AuthError, OidcClaims, OidcConfig, OidcValidator, RbacPolicy, RbacRole,
     SecAction, SecResource,
@@ -19,6 +17,4 @@ pub use auth::{
 pub use compliance::{
     ComplianceEngine, ComplianceFramework, ComplianceReport, ControlEvaluation, ControlStatus,
 };
-pub use server::{
-    start_api_server, ApiServerState, ClusterStatusReport, ValidatePolicyResponse,
-};
+pub use server::{start_api_server, ApiServerState, ClusterStatusReport, ValidatePolicyResponse};

@@ -13,7 +13,6 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::RwLock;
 
-
 /// Type of eBPF hook point being monitored.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum BpfHookType {
@@ -361,7 +360,9 @@ impl BpfIntegrityVerifier {
     ) {
         // 1. Check pinned path existence
         if !baseline.pinned_path.exists() {
-            self.metrics.pin_path_deletions.fetch_add(1, Ordering::Relaxed);
+            self.metrics
+                .pin_path_deletions
+                .fetch_add(1, Ordering::Relaxed);
             violations.push(IntegrityViolation {
                 violation_id: format!("iv-pin-{}-{}", baseline.name, timestamp_ns),
                 detected_at_ns: timestamp_ns,
@@ -384,7 +385,9 @@ impl BpfIntegrityVerifier {
         let current_state = self.read_program_state(&baseline.pinned_path);
         if let Some((current_id, current_tag)) = current_state {
             if current_id != baseline.expected_prog_id {
-                self.metrics.program_detachments.fetch_add(1, Ordering::Relaxed);
+                self.metrics
+                    .program_detachments
+                    .fetch_add(1, Ordering::Relaxed);
                 violations.push(IntegrityViolation {
                     violation_id: format!("iv-progid-{}-{}", baseline.name, timestamp_ns),
                     detected_at_ns: timestamp_ns,
@@ -428,7 +431,9 @@ impl BpfIntegrityVerifier {
     ) {
         // 1. Check pinned path existence
         if !baseline.pinned_path.exists() {
-            self.metrics.pin_path_deletions.fetch_add(1, Ordering::Relaxed);
+            self.metrics
+                .pin_path_deletions
+                .fetch_add(1, Ordering::Relaxed);
             violations.push(IntegrityViolation {
                 violation_id: format!("iv-mappin-{}-{}", baseline.name, timestamp_ns),
                 detected_at_ns: timestamp_ns,
@@ -465,14 +470,12 @@ impl BpfIntegrityVerifier {
                 });
             }
 
-            let drift = if current_entry_count > baseline.baseline_entry_count {
-                current_entry_count - baseline.baseline_entry_count
-            } else {
-                baseline.baseline_entry_count - current_entry_count
-            };
+            let drift = current_entry_count.abs_diff(baseline.baseline_entry_count);
 
             if drift > baseline.entry_count_drift_threshold {
-                self.metrics.map_drift_events.fetch_add(1, Ordering::Relaxed);
+                self.metrics
+                    .map_drift_events
+                    .fetch_add(1, Ordering::Relaxed);
                 violations.push(IntegrityViolation {
                     violation_id: format!("iv-mapdrift-{}-{}", baseline.name, timestamp_ns),
                     detected_at_ns: timestamp_ns,
@@ -651,7 +654,6 @@ mod tests {
         let verifier = BpfIntegrityVerifier::new(tmp.path());
 
         let prog_path = tmp.path().join("programs/xdp_ingress");
-
 
         // Read the actual inode for baseline
         use std::os::unix::fs::MetadataExt;

@@ -76,9 +76,9 @@ impl RiskEngine {
         timestamp_ns: u64,
     ) -> (WorkloadRiskProfile, BlastRadiusReport, ContainmentDecision) {
         // 1. Compute multi-dimensional risk score
-        let profile = self
-            .scorer
-            .evaluate_workload(workload_id, pod_name, namespace, inputs, timestamp_ns);
+        let profile =
+            self.scorer
+                .evaluate_workload(workload_id, pod_name, namespace, inputs, timestamp_ns);
 
         // 2. Compute lateral movement blast radius
         let blast = self
@@ -86,9 +86,9 @@ impl RiskEngine {
             .compute_blast_radius(workload_id, max_hops, timestamp_ns);
 
         // 3. Evaluate automated containment
-        let decision = self
-            .containment_manager
-            .evaluate_containment(&profile, &blast, timestamp_ns);
+        let decision =
+            self.containment_manager
+                .evaluate_containment(&profile, &blast, timestamp_ns);
 
         (profile, blast, decision)
     }
@@ -123,12 +123,9 @@ mod tests {
             is_database: true,
         });
 
-        engine.blast_analyzer.add_dependency_edge(
-            "w-payment-ingress",
-            "w-ledger-db",
-            "TCP",
-            5432,
-        );
+        engine
+            .blast_analyzer
+            .add_dependency_edge("w-payment-ingress", "w-ledger-db", "TCP", 5432);
 
         engine.blast_analyzer.add_dependency_edge(
             "w-payment-ingress",

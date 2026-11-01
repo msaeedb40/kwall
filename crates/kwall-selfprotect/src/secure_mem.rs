@@ -140,8 +140,7 @@ impl SecureBuffer {
                 let page_size = libc::sysconf(libc::_SC_PAGESIZE) as usize;
                 let addr = self.data.as_ptr() as *mut libc::c_void;
                 let aligned_addr = (addr as usize & !(page_size - 1)) as *mut libc::c_void;
-                let aligned_len =
-                    self.data.len() + (addr as usize - aligned_addr as usize);
+                let aligned_len = self.data.len() + (addr as usize - aligned_addr as usize);
                 // Note: mprotect requires page-aligned addresses
                 // In production, use a page-aligned allocator
                 let _ = libc::mprotect(aligned_addr, aligned_len, libc::PROT_READ);
@@ -197,11 +196,7 @@ impl SecureBuffer {
         #[cfg(target_os = "linux")]
         {
             unsafe {
-                libc::madvise(
-                    ptr as *mut libc::c_void,
-                    len,
-                    libc::MADV_DONTDUMP,
-                );
+                libc::madvise(ptr as *mut libc::c_void, len, libc::MADV_DONTDUMP);
             }
         }
 
@@ -230,10 +225,8 @@ impl Drop for SecureBuffer {
                 unsafe {
                     let page_size = libc::sysconf(libc::_SC_PAGESIZE) as usize;
                     let addr = self.data.as_ptr() as *mut libc::c_void;
-                    let aligned_addr =
-                        (addr as usize & !(page_size - 1)) as *mut libc::c_void;
-                    let aligned_len =
-                        self.data.len() + (addr as usize - aligned_addr as usize);
+                    let aligned_addr = (addr as usize & !(page_size - 1)) as *mut libc::c_void;
+                    let aligned_len = self.data.len() + (addr as usize - aligned_addr as usize);
                     let _ = libc::mprotect(
                         aligned_addr,
                         aligned_len,
@@ -252,10 +245,7 @@ impl Drop for SecureBuffer {
             #[cfg(target_os = "linux")]
             {
                 unsafe {
-                    libc::munlock(
-                        self.data.as_ptr() as *const libc::c_void,
-                        self.data.len(),
-                    );
+                    libc::munlock(self.data.as_ptr() as *const libc::c_void, self.data.len());
                 }
             }
             self.locked = false;
@@ -336,9 +326,9 @@ impl Default for CertRotationConfig {
     fn default() -> Self {
         Self {
             cert_dir: PathBuf::from("/var/lib/kwall/certs"),
-            cert_validity_secs: 86400,          // 24 hours
-            rotation_lead_time_secs: 3600,      // 1 hour before expiry
-            grace_period_secs: 300,             // 5 minute overlap
+            cert_validity_secs: 86400,     // 24 hours
+            rotation_lead_time_secs: 3600, // 1 hour before expiry
+            grace_period_secs: 300,        // 5 minute overlap
             trust_domain: "kwall.cluster.local".to_string(),
             node_id: "kwall-agent-unknown".to_string(),
         }
@@ -425,8 +415,14 @@ impl CertRotationManager {
     ///
     /// In production, this generates a CSR, submits it to the CA, and stores
     /// the signed certificate. For testability, this generates a self-signed certificate record.
-    pub fn issue_certificate(&self, timestamp_ns: u64) -> Result<CertificateRecord, CertRotationError> {
-        let serial = format!("{:016x}", timestamp_ns ^ 0xDEAD_CAFE_BABE_u64.wrapping_mul(timestamp_ns >> 8));
+    pub fn issue_certificate(
+        &self,
+        timestamp_ns: u64,
+    ) -> Result<CertificateRecord, CertRotationError> {
+        let serial = format!(
+            "{:016x}",
+            timestamp_ns ^ 0xDEAD_CAFE_BABE_u64.wrapping_mul(timestamp_ns >> 8)
+        );
 
         let subject_cn = format!(
             "spiffe://{}/node/{}",
@@ -447,8 +443,8 @@ impl CertRotationManager {
             key_path: self.config.cert_dir.join(format!("{}.key", serial)),
         };
 
-        // Store private key in secure mlock'd buffer
-        let fake_key = format!("-----BEGIN EC PRIVATE KEY-----\nkwall-{}-{}\n-----END EC PRIVATE KEY-----", serial, timestamp_ns);
+        // Store private key material in secure mlock'd buffer
+        let fake_key = format!("kwall-synthetic-key-material-{}-{}", serial, timestamp_ns);
         let mut key_buf = SecureBuffer::new(format!("mtls_key_{}", serial), fake_key.len());
         key_buf.write_secret(fake_key.as_bytes());
 
@@ -484,7 +480,12 @@ impl CertRotationManager {
             return Err(CertRotationError::RotationInProgress);
         }
 
-        let previous_serial = self.active_cert.read().unwrap().as_ref().map(|c| c.serial.clone());
+        let previous_serial = self
+            .active_cert
+            .read()
+            .unwrap()
+            .as_ref()
+            .map(|c| c.serial.clone());
 
         // Move current cert to previous (grace period)
         {
@@ -501,7 +502,9 @@ impl CertRotationManager {
             Ok(cert) => cert,
             Err(e) => {
                 self.rotation_in_progress.store(false, Ordering::Release);
-                self.metrics.total_rotation_failures.fetch_add(1, Ordering::Relaxed);
+                self.metrics
+                    .total_rotation_failures
+                    .fetch_add(1, Ordering::Relaxed);
                 return Err(e);
             }
         };
