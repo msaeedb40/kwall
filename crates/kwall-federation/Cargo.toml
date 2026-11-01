@@ -1,0 +1,20 @@
+[package]
+name = "kwall-federation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "KWALL Multi-Cluster Federation, Global Policy Translation, Service Mesh Interop & Enterprise OPA/Rego Engine"
+
+[dependencies]
+kwall-core = { workspace = true }
+kwall-common = { workspace = true }
+kwall-policy = { workspace = true }
+kwall-identity = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }

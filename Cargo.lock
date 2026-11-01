@@ -1010,9 +1010,11 @@ dependencies = [
  "kwall-common",
  "kwall-config",
  "kwall-core",
+ "kwall-cri",
  "kwall-ebpf-common",
  "kwall-ebpf-loader",
  "kwall-event-router",
+ "kwall-selfprotect",
  "tokio",
  "tracing",
 ]
@@ -1025,10 +1027,26 @@ dependencies = [
  "kwall-config",
  "kwall-core",
  "kwall-detection",
+ "kwall-l7",
  "kwall-policy",
  "serde",
  "serde_json",
  "serde_yaml",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "kwall-application-security"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "kwall-common",
+ "kwall-core",
+ "kwall-l7",
+ "serde",
+ "serde_json",
  "thiserror",
  "tokio",
  "tracing",
@@ -1102,6 +1120,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwall-cri"
+version = "0.1.0"
+dependencies = [
+ "kwall-common",
+ "kwall-core",
+ "kwall-ebpf-common",
+ "kwall-policy",
+ "kwall-workload",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "kwall-detection"
 version = "0.1.0"
 dependencies = [
@@ -1167,6 +1201,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwall-event-processing"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "kwall-common",
+ "kwall-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "kwall-event-router"
 version = "0.1.0"
 dependencies = [
@@ -1175,6 +1223,22 @@ dependencies = [
  "kwall-ebpf-common",
  "serde",
  "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "kwall-federation"
+version = "0.1.0"
+dependencies = [
+ "kwall-common",
+ "kwall-core",
+ "kwall-identity",
+ "kwall-policy",
+ "serde",
+ "serde_json",
+ "serde_yaml",
  "thiserror",
  "tokio",
  "tracing",
@@ -1190,6 +1254,19 @@ dependencies = [
  "kwall-ebpf-common",
  "kwall-l7",
  "libc",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "kwall-graphql"
+version = "0.1.0"
+dependencies = [
+ "kwall-common",
+ "kwall-core",
  "serde",
  "serde_json",
  "thiserror",
@@ -1275,6 +1352,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwall-risk"
+version = "0.1.0"
+dependencies = [
+ "kwall-common",
+ "kwall-core",
+ "kwall-policy",
+ "kwall-workload",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "kwall-sbom"
 version = "0.1.0"
 dependencies = [
@@ -1284,6 +1376,20 @@ dependencies = [
  "kwall-ebpf-common",
  "kwall-event-router",
  "kwall-l7",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "kwall-selfprotect"
+version = "0.1.0"
+dependencies = [
+ "kwall-common",
+ "kwall-core",
+ "libc",
  "serde",
  "serde_json",
  "thiserror",

@@ -1,0 +1,20 @@
+[package]
+name = "kwall-cri"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "KWALL Container Runtime Interface (CRI) Direct Integration (containerd & CRI-O) with zero-latency streaming and pre-execution LSM sync"
+
+[dependencies]
+kwall-core = { workspace = true }
+kwall-common = { workspace = true }
+kwall-workload = { workspace = true }
+kwall-policy = { workspace = true }
+kwall-ebpf-common = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }

@@ -11,6 +11,7 @@ keywords:
   - xdp
   - lsm
   - kubernetes
+icon: https://raw.githubusercontent.com/msaeedb40/kwall/main/kwall.jpeg
 home: https://github.com/msaeedb40/kwall
 sources:
   - https://github.com/msaeedb40/kwall

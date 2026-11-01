@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KWALL Enterprise Management Console | Cloud-Native eBPF Security</title>
+    <meta name="description" content="KWALL Single-Pane-of-Glass Enterprise Management Dashboard for multi-cluster eBPF security, L3-L7 policy enforcement, live threat triage, and automated compliance.">
+    <link rel="stylesheet" href="style.css">
+    <!-- Anti-CSRF / Anti-XSRF Security Tokens -->
+    <meta name="csrf-token" content="kwall-csrf-9f82c47a10b981e82a6cd06b6d49821f">
+    <meta name="csrf-param" content="authenticity_token">
+    <meta name="xsrf-header-name" content="X-XSRF-Token">
+    <meta name="csrf-header-name" content="X-CSRF-Token">
+    <!-- Google Fonts for modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <div class="brand-logo">
+                    <svg viewBox="0 0 32 32" fill="none" class="logo-icon">
+                        <polygon points="16,2 30,9 30,23 16,30 2,23 2,9" stroke="url(#kwall-grad)" stroke-width="2.5" fill="rgba(16, 185, 129, 0.08)"/>
+                        <circle cx="16" cy="16" r="5" fill="#10b981"/>
+                        <line x1="16" y1="2" x2="16" y2="11" stroke="#06b6d4" stroke-width="1.8"/>
+                        <line x1="2" y1="23" x2="11" y2="19" stroke="#8b5cf6" stroke-width="1.8"/>
+                        <line x1="30" y1="23" x2="21" y2="19" stroke="#10b981" stroke-width="1.8"/>
+                        <defs>
+                            <linearGradient id="kwall-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#10b981"/>
+                                <stop offset="50%" stop-color="#06b6d4"/>
+                                <stop offset="100%" stop-color="#8b5cf6"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-name">KWALL</span>
+                    <span class="brand-tag">ENTERPRISE eBPF</span>
+                </div>
+            </div>
+
+            <!-- Cluster Context Switcher -->
+            <div class="cluster-selector-wrap">
+                <label for="clusterSelect">ACTIVE CLUSTER</label>
+                <div class="custom-select">
+                    <select id="clusterSelect">
+                        <option value="eks-prod-us-east-1" selected>prod-us-east-1 (EKS)</option>
+                        <option value="gke-stage-eu-west-1">stage-eu-west-1 (GKE)</option>
+                        <option value="aks-corp-eastus2">corp-eastus2 (AKS)</option>
+                        <option value="kind-local-dev">kind-dev-sandbox (KinD)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="nav-menu">
+                <a href="#topology" class="nav-item active" data-tab="tab-topology" id="navTopology">
+                    <span class="nav-icon">🕸️</span>
+                    <span class="nav-label">Topology Graph</span>
+                    <span class="badge live-badge">LIVE</span>
+                </a>
+                <a href="#alerts" class="nav-item" data-tab="tab-alerts" id="navAlerts">
+                    <span class="nav-icon">🚨</span>
+                    <span class="nav-label">Alert Triage</span>
+                    <span class="badge alert-count-badge" id="sidebarAlertCount">3</span>
+                </a>
+                <a href="#policies" class="nav-item" data-tab="tab-policies" id="navPolicies">
+                    <span class="nav-icon">🛡️</span>
+                    <span class="nav-label">Policy Builder</span>
+                </a>
+                <a href="#compliance" class="nav-item" data-tab="tab-compliance" id="navCompliance">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-label">Compliance Score</span>
+                    <span class="badge score-pill">98%</span>
+                </a>
+                <a href="#audit" class="nav-item" data-tab="tab-audit" id="navAudit">
+                    <span class="nav-icon">📜</span>
+                    <span class="nav-label">Audit Log</span>
+                </a>
+            </nav>
+
+            <!-- Kernel Engine Status Card -->
+            <div class="engine-status-card">
+                <div class="status-header">
+                    <span class="pulse-indicator online"></span>
+                    <span class="status-title">Kernel Engine Active</span>
+                </div>
+                <div class="status-details">
+                    <div class="metric-row"><span>eBPF LSM:</span> <strong>ENFORCING</strong></div>
+                    <div class="metric-row"><span>sk_msg / TLS:</span> <strong>ONLINE</strong></div>
+                    <div class="metric-row"><span>XDP Bypass:</span> <strong>0.24µs</strong></div>
+                    <div class="metric-row"><span>CSRF Guard:</span> <strong style="color: #10b981;" id="sidebarCsrfStatus">ENFORCED</strong></div>
+                </div>
+            </div>
+
+            <!-- User footer -->
+            <div class="sidebar-user">
+                <div class="avatar">SA</div>
+                <div class="user-info">
+                    <span class="user-name">Sarah Chen</span>
+                    <span class="user-role">Security Lead (Admin)</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header bar -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h1 class="page-title" id="pageTitle">Multi-Cluster Topology Graph</h1>
+                    <span class="header-breadcrumbs">Clusters &gt; <strong id="currentClusterLabel">prod-us-east-1</strong> &gt; Real-Time Map</span>
+                </div>
+
+                <div class="header-metrics">
+                    <div class="stat-pill">
+                        <span class="stat-label">NODES</span>
+                        <span class="stat-value" id="headerNodeCount">8 / 8</span>
+                    </div>
+                    <div class="stat-pill">
+                        <span class="stat-label">WORKLOADS</span>
+                        <span class="stat-value" id="headerWorkloadCount">42 Pods</span>
+                    </div>
+                    <div class="stat-pill threat-pill">
+                        <span class="stat-label">THREAT LEVEL</span>
+                        <span class="stat-value threat-med" id="headerThreatLevel">ELEVATED</span>
+                    </div>
+                    <div class="stat-pill">
+                        <span class="stat-label">CSRF / XSRF</span>
+                        <span class="stat-value text-emerald" id="headerCsrfBadge" title="X-CSRF-Token and X-XSRF-Token double-submit protection active">SHIELDED</span>
+                    </div>
+                    <div class="stat-pill">
+                        <span class="stat-label">eBPF PROBES</span>
+                        <span class="stat-value text-emerald">128 Attached</span>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" id="btnToggleSim" title="Toggle Live Network Traffic Simulation">
+                        <span class="dot-live"></span> <span id="simStatusText">Live Feed: Active</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- TAB 1: TOPOLOGY GRAPH -->
+            <section class="tab-panel active" id="tab-topology">
+                <div class="panel-container">
+                    <div class="topology-wrapper card-glass">
+                        <div class="topology-toolbar">
+                            <div class="filter-group">
+                                <label>View Filter:</label>
+                                <button class="btn-filter active" data-filter="all">All Layers</button>
+                                <button class="btn-filter" data-filter="threats">Threats Only</button>
+                                <button class="btn-filter" data-filter="l7">L7 Ingress</button>
+                            </div>
+                            <div class="zoom-controls">
+                                <button class="btn-icon" id="btnZoomIn" title="Zoom In">+</button>
+                                <button class="btn-icon" id="btnZoomOut" title="Zoom Out">−</button>
+                                <button class="btn-icon" id="btnResetView" title="Reset View">⟲</button>
+                            </div>
+                        </div>
+
+                        <!-- SVG Canvas for Node & Edge Topology -->
+                        <div class="canvas-container" id="canvasContainer">
+                            <svg id="topologySvg" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid meet">
+                                <defs>
+                                    <filter id="glow-red" x="-20%" y="-20%" width="140%" height="140%">
+                                        <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#ef4444" flood-opacity="0.9"/>
+                                    </filter>
+                                    <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+                                        <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#06b6d4" flood-opacity="0.8"/>
+                                    </filter>
+                                    <linearGradient id="edge-cyan" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.7"/>
+                                        <stop offset="100%" stop-color="#10b981" stop-opacity="0.7"/>
+                                    </linearGradient>
+                                    <linearGradient id="edge-threat" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#ef4444" stop-opacity="0.9"/>
+                                        <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.9"/>
+                                    </linearGradient>
+                                </defs>
+                                <!-- Connections rendered by app.js -->
+                                <g id="svgEdges"></g>
+                                <!-- Nodes rendered by app.js -->
+                                <g id="svgNodes"></g>
+                            </svg>
+                        </div>
+
+                        <!-- Legend -->
+                        <div class="topology-legend">
+                            <span class="legend-item"><span class="legend-dot dot-cluster"></span> Cluster Root</span>
+                            <span class="legend-item"><span class="legend-dot dot-node"></span> Worker Node</span>
+                            <span class="legend-item"><span class="legend-dot dot-pod"></span> Secure Pod</span>
+                            <span class="legend-item"><span class="legend-dot dot-threat"></span> Threat Detected</span>
+                            <span class="legend-item"><span class="legend-dot dot-quarantine"></span> Quarantined</span>
+                        </div>
+                    </div>
+
+                    <!-- Right Inspector Drawer -->
+                    <div class="inspector-card card-glass" id="nodeInspector">
+                        <div class="card-header">
+                            <h3 class="card-title">Entity Inspector</h3>
+                            <span class="badge" id="inspectorTierBadge">ELEVATED RISK</span>
+                        </div>
+                        <div class="inspector-body" id="inspectorContent">
+                            <div class="empty-state-text">Select a node or pod in the topology graph to inspect live eBPF sockets, syscall audits, and policies.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: ALERT TRIAGE CONSOLE -->
+            <section class="tab-panel" id="tab-alerts">
+                <div class="card-glass panel-card">
+                    <div class="panel-header-action">
+                        <div>
+                            <h2 class="section-title">Active Security Threats & Violations</h2>
+                            <p class="section-desc">eBPF kernel detections correlated with MITRE ATT&CK tactics, L7 WAF signatures, and behavioral drift.</p>
+                        </div>
+                        <div class="header-button-row">
+                            <button class="btn btn-primary btn-sm" id="btnAutoRemediate">⚡ Auto-Remediate High</button>
+                            <button class="btn btn-secondary btn-sm" id="btnExportAlerts">📥 Export SIEM (JSON)</button>
+                        </div>
+                    </div>
+
+                    <div class="alert-filter-bar">
+                        <div class="filter-pill-group">
+                            <button class="btn-pill active" data-sev="ALL">All (<span id="countAll">3</span>)</button>
+                            <button class="btn-pill sev-crit" data-sev="CRITICAL">Critical (<span id="countCrit">1</span>)</button>
+                            <button class="btn-pill sev-high" data-sev="HIGH">High (<span id="countHigh">1</span>)</button>
+                            <button class="btn-pill sev-med" data-sev="MEDIUM">Medium (<span id="countMed">1</span>)</button>
+                            <button class="btn-pill" data-sev="RESOLVED">Resolved</button>
+                        </div>
+                        <input type="text" id="alertSearchInput" class="input-search" placeholder="Search by namespace, pod, CVE or MITRE tactic...">
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table" id="alertsTable">
+                            <thead>
+                                <tr>
+                                    <th>Severity</th>
+                                    <th>Alert / Signature</th>
+                                    <th>Workload / Pod</th>
+                                    <th>MITRE ATT&CK</th>
+                                    <th>eBPF Probe</th>
+                                    <th>Timestamp</th>
+                                    <th>Triage Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alertsTbody">
+                                <!-- Populated dynamically by app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: VISUAL POLICY BUILDER -->
+            <section class="tab-panel" id="tab-policies">
+                <div class="policy-builder-layout">
+                    <!-- Policy Form Builder -->
+                    <div class="card-glass policy-form-card">
+                        <div class="card-header">
+                            <h2 class="card-title">Security Policy Constructor</h2>
+                            <span class="badge badge-cyan">KWALL CRD v1alpha1</span>
+                        </div>
+                        <form id="policyForm" class="policy-form">
+                            <!-- Anti-CSRF Form Authenticity Field -->
+                            <input type="hidden" name="authenticity_token" id="policyCsrfToken" value="kwall-csrf-9f82c47a10b981e82a6cd06b6d49821f">
+                            <input type="hidden" name="_csrf" value="kwall-csrf-9f82c47a10b981e82a6cd06b6d49821f">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="policyName">Policy Identifier</label>
+                                    <input type="text" id="policyName" value="protect-payment-backend" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="policyNamespace">Target Namespace</label>
+                                    <select id="policyNamespace">
+                                        <option value="production" selected>production</option>
+                                        <option value="finance">finance</option>
+                                        <option value="ingress-nginx">ingress-nginx</option>
+                                        <option value="kube-system">kube-system</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="policyLayer">Enforcement Plane (Layer)</label>
+                                    <select id="policyLayer">
+                                        <option value="L3_L4">L3/L4 Network (TC / XDP BPF)</option>
+                                        <option value="L7_WAF" selected>L7 Application / WAF (sk_msg / TLS)</option>
+                                        <option value="LSM_SANDBOX">LSM Host Sandbox (bpf_lsm)</option>
+                                        <option value="CRI_CONTAINER">CRI / Container Seccomp</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="policyAction">Enforcement Action</label>
+                                    <select id="policyAction">
+                                        <option value="Drop" selected>Block &amp; Drop (eBPF XDP/TC)</option>
+                                        <option value="KillProcess">Kill Process (SIGKILL via LSM)</option>
+                                        <option value="QuarantinePod">Quarantine &amp; Isolate Pod</option>
+                                        <option value="AuditOnly">Audit &amp; Telemetry Only</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="podSelector">Pod Match Labels (key=value)</label>
+                                <input type="text" id="podSelector" value="app=payment-service, tier=backend">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Enforcement Rules (Protocol / Ports / Paths)</label>
+                                <div class="rule-inputs-box">
+                                    <div class="input-line">
+                                        <span class="input-label">Protocol:</span>
+                                        <select id="ruleProto">
+                                            <option value="HTTP_TLS">HTTPS / TLS 1.3</option>
+                                            <option value="GRPC">gRPC / HTTP2</option>
+                                            <option value="TCP">Raw TCP</option>
+                                            <option value="DNS">DNS (UDP 53)</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-line">
+                                        <span class="input-label">Allowed Egress CIDR:</span>
+                                        <input type="text" id="ruleCidr" value="10.244.0.0/16, 172.20.0.0/16">
+                                    </div>
+                                    <div class="input-line">
+                                        <span class="input-label">Disallowed Exec Paths:</span>
+                                        <input type="text" id="ruleExec" value="/bin/sh, /bin/bash, /usr/bin/nc, /tmp/*">
+                                    </div>
+                                    <div class="input-line">
+                                        <span class="input-label">WAF Rules:</span>
+                                        <label><input type="checkbox" id="chkSqli" checked> SQL Injection</label>
+                                        <label><input type="checkbox" id="chkXss" checked> XSS &amp; Script Injection</label>
+                                        <label><input type="checkbox" id="chkSsrf" checked> Cloud Metadata SSRF</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-button-row">
+                                <button type="button" class="btn btn-secondary" id="btnValidatePolicy">Verify Syntax</button>
+                                <button type="button" class="btn btn-primary" id="btnDeployPolicy">Deploy to Active Cluster</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Live CRD Code Preview -->
+                    <div class="card-glass policy-preview-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Generated Kubernetes Custom Resource (YAML)</h3>
+                            <button class="btn btn-sm btn-outline" id="btnCopyYaml">Copy YAML</button>
+                        </div>
+                        <pre class="code-box"><code id="yamlPreview">apiVersion: kwall.security/v1alpha1
+kind: KwallSecurityPolicy
+metadata:
+  name: protect-payment-backend
+  namespace: production
+spec:
+  selector:
+    matchLabels:
+      app: payment-service
+      tier: backend
+  enforcementPlane: L7_WAF
+  action: Drop
+  rules:
+    ingress:
+      - protocol: HTTPS
+        waf:
+          sqliProtection: true
+          xssProtection: true
+          ssrfProtection: true
+    egress:
+      - toCIDR:
+          - 10.244.0.0/16
+          - 172.20.0.0/16
+    hostSandbox:
+      deniedExecutables:
+        - /bin/sh
+        - /bin/bash
+        - /usr/bin/nc
+        - /tmp/*
+</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: COMPLIANCE SCORECARD -->
+            <section class="tab-panel" id="tab-compliance">
+                <div class="card-glass panel-card">
+                    <div class="panel-header-action">
+                        <div>
+                            <h2 class="section-title">Automated Enterprise Compliance Benchmarks</h2>
+                            <p class="section-desc">Continuous audit evaluations against CIS Kubernetes Benchmark v1.8, SOC 2 Type II, and PCI-DSS v4.0.</p>
+                        </div>
+                        <div class="header-button-row">
+                            <button class="btn btn-primary btn-sm" id="btnGenerateReport">📄 Generate Full Audit PDF</button>
+                            <button class="btn btn-secondary btn-sm" id="btnExportJson">💾 Export JSON Spec</button>
+                        </div>
+                    </div>
+
+                    <!-- Dial Scores -->
+                    <div class="compliance-dials-grid">
+                        <div class="dial-card">
+                            <div class="dial-circle dial-cis">
+                                <span class="dial-number">96.4%</span>
+                            </div>
+                            <h3 class="dial-title">CIS Kubernetes v1.8</h3>
+                            <p class="dial-subtitle">48 of 50 Checks Passing</p>
+                            <span class="status-badge-ok">COMPLIANT</span>
+                        </div>
+
+                        <div class="dial-card">
+                            <div class="dial-circle dial-soc2">
+                                <span class="dial-number">98.1%</span>
+                            </div>
+                            <h3 class="dial-title">SOC 2 Type II</h3>
+                            <p class="dial-subtitle">Trust Services Criteria (CC6.1-CC6.8)</p>
+                            <span class="status-badge-ok">CERTIFIED</span>
+                        </div>
+
+                        <div class="dial-card">
+                            <div class="dial-circle dial-pci">
+                                <span class="dial-number">95.2%</span>
+                            </div>
+                            <h3 class="dial-title">PCI-DSS v4.0</h3>
+                            <p class="dial-subtitle">Req 1.2, 5.3, 10.2, 11.5 FIM</p>
+                            <span class="status-badge-ok">COMPLIANT</span>
+                        </div>
+                    </div>
+
+                    <!-- Checklist -->
+                    <div class="compliance-checklist">
+                        <h3 class="subheading">Regulatory Control Itemization</h3>
+                        <div class="control-row pass">
+                            <span class="control-icon">✅</span>
+                            <div class="control-info">
+                                <strong>CIS 5.2.1: eBPF Host File Integrity &amp; LSM Binary Execution Restrictions</strong>
+                                <span>Ensures that untrusted container processes cannot execute /bin/sh or modify /etc/shadow via bpf_lsm hooks.</span>
+                            </div>
+                            <span class="badge badge-pass">PASSED</span>
+                        </div>
+                        <div class="control-row pass">
+                            <span class="control-icon">✅</span>
+                            <div class="control-info">
+                                <strong>PCI-DSS 1.2.1: Ingress/Egress Micro-segmentation &amp; XDP Drop Enforcement</strong>
+                                <span>Network security controls restrict outbound egress traffic to validated container CIDRs.</span>
+                            </div>
+                            <span class="badge badge-pass">PASSED</span>
+                        </div>
+                        <div class="control-row pass">
+                            <span class="control-icon">✅</span>
+                            <div class="control-info">
+                                <strong>SOC 2 CC6.8: Real-Time Detection of Malicious eBPF / Kernel Rootkits</strong>
+                                <span>KWALL Self-Protection verified probe integrity, kprobe tampering guards, and ring-buffer health.</span>
+                            </div>
+                            <span class="badge badge-pass">PASSED</span>
+                        </div>
+                        <div class="control-row warning">
+                            <span class="control-icon">⚠️</span>
+                            <div class="control-info">
+                                <strong>CIS 4.1.5: Node Kernel Auditd Ingestion &amp; Syscall Buffer Backlog</strong>
+                                <span>Worker node ip-10-0-2-18 has 1 audit queue warning during peak burst traffic.</span>
+                            </div>
+                            <span class="badge badge-warn">ATTENTION</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: AUDIT LOG -->
+            <section class="tab-panel" id="tab-audit">
+                <div class="card-glass panel-card">
+                    <div class="panel-header-action">
+                        <div>
+                            <h2 class="section-title">Cryptographic Administrative Audit Trail</h2>
+                            <p class="section-desc">Tamper-evident SHA-256 hash-chained log for all administrative and automated remediation actions.</p>
+                        </div>
+                        <span class="badge badge-cyan" id="chainStatus">🔒 HASH CHAIN VERIFIED (0 Tamper Events)</span>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table" id="auditTable">
+                            <thead>
+                                <tr>
+                                    <th>Audit ID</th>
+                                    <th>Actor</th>
+                                    <th>Action</th>
+                                    <th>Target Resource</th>
+                                    <th>Status</th>
+                                    <th>SHA-256 Record Digest</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditTbody">
+                                <!-- Populated dynamically by app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Notification Toast Element -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

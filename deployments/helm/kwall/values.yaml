@@ -1,11 +1,12 @@
 # Default values for kwall.
-# This is a YAML-formatted file.
+# Production-ready configuration for KWALL Kubernetes eBPF Security Platform.
 
 global:
+  clusterName: prod-k8s-cluster
   clusterDomain: cluster.local
   imagePullSecrets: []
 
-# Node Agent DaemonSet configuration
+# Node Agent DaemonSet configuration (eBPF XDP, TC, LSM, socket inspection)
 agent:
   enabled: true
   image:
@@ -50,6 +51,72 @@ operator:
     requests:
       cpu: 50m
       memory: 64Mi
+
+# Enterprise API & GraphQL Gateway Deployment configuration
+api:
+  enabled: true
+  replicas: 2
+  image:
+    repository: ghcr.io/msaeedb40/kwall-api
+    tag: v0.1.0
+    pullPolicy: IfNotPresent
+  logLevel: info
+  service:
+    type: ClusterIP
+    port: 8080
+  auth:
+    secretName: kwall-api-secret
+    oidc:
+      enabled: true
+      issuerUrl: "https://auth.kwall.enterprise/auth/realms/security"
+      clientId: "kwall-management-plane"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Web Management Console Dashboard
+dashboard:
+  enabled: true
+  replicas: 2
+  image:
+    repository: ghcr.io/msaeedb40/kwall-dashboard
+    tag: v0.1.0
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# Kubernetes Gateway API Configuration (gateway.networking.k8s.io/v1)
+gatewayApi:
+  enabled: false
+  gatewayClassName: cilium
+  annotations: {}
+  hostnames:
+    - "kwall.security.internal"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      hostname: "kwall.security.internal"
+    - name: https
+      port: 443
+      protocol: HTTPS
+      hostname: "kwall.security.internal"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: kwall-tls-cert
 
 # Admission Webhook configuration
 webhook:

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kwall-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: kwall
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: kwall
+data:
+  kwall.yaml: |
+    cluster:
+      name: {{ .Values.global.clusterName | default "k8s-cluster" }}
+      domain: {{ .Values.global.clusterDomain }}
+    agent:
+      fail_mode: {{ .Values.agent.failMode }}
+      ring_buffer_size: {{ .Values.agent.ringBufferSize }}
+      xdp_enabled: true
+      lsm_enabled: true
+      tls_uprobes_enabled: true
+    logging:
+      level: {{ .Values.agent.logLevel }}
+      format: {{ .Values.agent.logFormat }}

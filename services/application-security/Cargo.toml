@@ -1,0 +1,20 @@
+[package]
+name = "kwall-application-security"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "KWALL RASP: Real-time OWASP WAF engine with eBPF socket stream integration"
+
+[dependencies]
+serde        = { workspace = true }
+serde_json   = { workspace = true }
+thiserror    = { workspace = true }
+tracing      = { workspace = true }
+tokio        = { workspace = true }
+futures      = { workspace = true }
+
+kwall-common = { workspace = true }
+kwall-core   = { workspace = true }
+kwall-l7     = { workspace = true }

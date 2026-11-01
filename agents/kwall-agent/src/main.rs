@@ -66,10 +66,55 @@ async fn main() -> anyhow::Result<()> {
     let _router = Arc::new(EventRouter::spawn(16384, 4, handler, Arc::clone(&metrics)));
     info!("Event router worker pool initialized");
 
+    // 6. Initialize Agent Self-Protection & Kernel Watchdog (Phase 17)
+    let self_protect = Arc::new(kwall_selfprotect::SelfProtectionEngine::default());
+    if let Err(e) = self_protect.watchdog.arm() {
+        tracing::warn!("Kernel watchdog arming note: {e}");
+    }
+    let now_ns = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos() as u64;
+    let _ = self_protect.cert_manager.issue_certificate(now_ns);
+
+    // Spawn self-protection and watchdog heartbeat loop
+    let sp_engine = Arc::clone(&self_protect);
+    let sp_handle = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(10));
+        loop {
+            interval.tick().await;
+            let timestamp_ns = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos() as u64;
+            let report = sp_engine.run_cycle(timestamp_ns);
+            tracing::debug!(
+                cycle = report.cycle_count,
+                status = %report.status,
+                watchdog = %report.watchdog_state,
+                "Self-protection verification cycle completed"
+            );
+        }
+    });
+
+    // 7. Initialize Direct Container Runtime Interface (CRI) Integration (Phase 18)
+    match kwall_cri::CriIntegrationManager::discover() {
+        Ok(cri_mgr) => {
+            info!(
+                runtime = %cri_mgr.client.runtime_type(),
+                socket = %cri_mgr.client.socket_path().display(),
+                "Direct CRI streaming & pre-exec LSM integration initialized"
+            );
+        }
+        Err(e) => {
+            tracing::warn!("Direct CRI discovery note (fallback to K8s API informers): {e}");
+        }
+    }
+
     health.mark_ready();
     info!("KWALL Agent status: {}", health.status_message());
 
-    // 6. Graceful POSIX signal handling (SIGINT / SIGTERM)
+    // 7. Graceful POSIX signal handling (SIGINT / SIGTERM)
     let mut sigint = signal(SignalKind::interrupt())?;
     let mut sigterm = signal(SignalKind::terminate())?;
 
@@ -82,6 +127,8 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
+    sp_handle.abort();
+    let _ = self_protect.watchdog.pause();
     health.mark_unready();
     info!("KWALL Node Agent successfully terminated.");
     Ok(())

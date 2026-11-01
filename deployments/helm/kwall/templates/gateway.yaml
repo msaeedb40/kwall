@@ -1,0 +1,83 @@
+{{- if .Values.gatewayApi.enabled -}}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: kwall-gateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: kwall-gateway
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: kwall
+  {{- with .Values.gatewayApi.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  gatewayClassName: {{ .Values.gatewayApi.gatewayClassName | default "cilium" }}
+  listeners:
+    {{- range .Values.gatewayApi.listeners }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      protocol: {{ .protocol }}
+      {{- if .hostname }}
+      hostname: {{ .hostname | quote }}
+      {{- end }}
+      {{- if .tls }}
+      tls:
+        mode: {{ .tls.mode | default "Terminate" }}
+        certificateRefs:
+          {{- range .tls.certificateRefs }}
+          - kind: Secret
+            name: {{ .name }}
+          {{- end }}
+      {{- end }}
+      allowedRoutes:
+        namespaces:
+          from: Same
+    {{- end }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: kwall-routes
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: kwall-routes
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: kwall
+spec:
+  parentRefs:
+    - name: kwall-gateway
+      namespace: {{ .Release.Namespace }}
+  {{- if .Values.gatewayApi.hostnames }}
+  hostnames:
+    {{- range .Values.gatewayApi.hostnames }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- end }}
+  rules:
+    # 1. Route REST API (/api) to kwall-api
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: kwall-api
+          port: {{ .Values.api.service.port }}
+    # 2. Route GraphQL Gateway (/graphql) to kwall-api
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /graphql
+      backendRefs:
+        - name: kwall-api
+          port: {{ .Values.api.service.port }}
+    # 3. Route Web Dashboard (/) to kwall-dashboard
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: kwall-dashboard
+          port: {{ .Values.dashboard.service.port }}
+{{- end }}
